@@ -23,6 +23,22 @@ For this use case, it is a very practical choice.
 - `POST /api/cv/generate`
 - `POST /api/cover-letter/generate`
 
+### CV generate request body
+
+```json
+{
+  "page_title": "Senior Backend Engineer at Example",
+  "job_url": "https://example.com/jobs/backend-engineer",
+  "job_description": "Full scanned job description text from the page...",
+  "story_json_override": null
+}
+```
+
+Each `POST /api/cv/generate` call now also writes artifacts to `data/generated/<page_title>/`:
+
+- `generated_cv.json` with the raw generated CV JSON
+- `generated_cv.md` with the page title, job URL, and a YAML-formatted view of the generated CV
+
 ## Setup
 
 ```bash

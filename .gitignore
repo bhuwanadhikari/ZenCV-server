@@ -36,8 +36,6 @@ dist/
 data/cv-data/*.json
 !data/cv-data/*.example.json
 
-
-
-# Local CV data
-data/cv-data/*.json
-!data/cv-data/*.example.json
+# Generated output
+data/generated/
+generated/

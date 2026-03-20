@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field
 
 
 class GenerateCvRequest(BaseModel):
+    page_title: str = Field(min_length=1)
+    job_url: str = Field(min_length=1)
     job_description: str = Field(min_length=20)
     story_json_override: Optional[Dict[str, Any]] = None
 
