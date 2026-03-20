@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -22,4 +22,19 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    try:
+        return Settings()
+    except ValidationError as exc:
+        missing_fields = [
+            ".".join(str(part) for part in error["loc"])
+            for error in exc.errors()
+            if error["type"] == "missing"
+        ]
+        if missing_fields:
+            missing_fields_text = ", ".join(missing_fields)
+            raise ValueError(
+                "Missing required environment variables: "
+                f"{missing_fields_text}. Create a `.env` file in the project root, "
+                "for example by copying `.env.example`, and set the required values."
+            ) from exc
+        raise

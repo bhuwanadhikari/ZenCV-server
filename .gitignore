@@ -31,3 +31,13 @@ dist/
 .DS_Store
 .idea/
 .vscode/
+
+# Local CV data
+data/cv-data/*.json
+!data/cv-data/*.example.json
+
+
+
+# Local CV data
+data/cv-data/*.json
+!data/cv-data/*.example.json

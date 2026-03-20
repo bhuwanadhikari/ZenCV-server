@@ -1,0 +1,97 @@
+[
+  {
+    "name": "JANE DOE",
+    "role": "SOFTWARE ENGINEER",
+    "contactLines": [
+      [
+        {
+          "value": "Berlin, Germany"
+        },
+        {
+          "value": "+49 0000000000"
+        },
+        {
+          "value": "jane.doe@example.com",
+          "href": "mailto:jane.doe@example.com"
+        }
+      ],
+      [
+        {
+          "label": "Github",
+          "value": "github.com/janedoe",
+          "href": "https://github.com/janedoe"
+        },
+        {
+          "label": "Linkedin",
+          "value": "linkedin.com/in/janedoe",
+          "href": "https://linkedin.com/in/janedoe"
+        }
+      ]
+    ],
+    "profile": {
+      "label": "Profile",
+      "summary": "Software engineer with experience building reliable web applications, collaborating across teams, and shipping maintainable product features."
+    },
+    "skillGroups": [
+      {
+        "label": "Frontend",
+        "items": [
+          "React.js",
+          "TypeScript",
+          "Next.js",
+          "Jest"
+        ]
+      },
+      {
+        "label": "Backend",
+        "items": [
+          "Python",
+          "FastAPI",
+          "PostgreSQL",
+          "Docker"
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "title": "Professional Experience",
+        "entries": [
+          {
+            "dateRange": "Jan 2023 - Present",
+            "title": "Software Engineer",
+            "organization": "Example Tech",
+            "link": "https://example.com/",
+            "location": "Berlin, Germany",
+            "stack": [
+              "React.js",
+              "TypeScript",
+              "FastAPI",
+              "PostgreSQL"
+            ],
+            "bullets": [
+              "Built customer-facing product features for a SaaS platform used by distributed teams.",
+              "Collaborated with designers and backend engineers to deliver responsive, accessible interfaces.",
+              "Improved deployment reliability by documenting release steps and tightening API validation."
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Education",
+        "entries": [
+          {
+            "dateRange": "Oct 2019 - Jul 2022",
+            "title": "BSc in Computer Science",
+            "organization": "Example University",
+            "link": "https://example.edu/",
+            "location": "Munich, Germany",
+            "bullets": [
+              "Focused on software engineering, distributed systems, and data-intensive applications.",
+              "Completed team-based projects covering backend services, frontend applications, and testing workflows."
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

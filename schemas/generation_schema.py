@@ -8,6 +8,46 @@ class GenerateCvRequest(BaseModel):
     story_json_override: Optional[Dict[str, Any]] = None
 
 
+class CvContactItem(BaseModel):
+    label: Optional[str] = None
+    value: str
+    href: Optional[str] = None
+
+
+class CvEntry(BaseModel):
+    dateRange: str
+    title: str
+    organization: str
+    link: str
+    location: str
+    bullets: List[str]
+    stack: Optional[List[str]] = None
+
+
+class CvSection(BaseModel):
+    title: str
+    entries: List[CvEntry]
+
+
+class CvProfile(BaseModel):
+    label: str
+    summary: str
+
+
+class CvSkillGroup(BaseModel):
+    label: str
+    items: List[str]
+
+
+class CvData(BaseModel):
+    name: str
+    role: str
+    contactLines: List[List[CvContactItem]]
+    profile: CvProfile
+    skillGroups: List[CvSkillGroup]
+    sections: List[CvSection]
+
+
 class SkillGroup(BaseModel):
     category: str
     selected_skills: List[str] = Field(min_length=1)
@@ -19,7 +59,7 @@ class ExperienceSelection(BaseModel):
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     location: Optional[str] = None
-    selected_bullets: List[str] = Field(min_length=3, max_length=3)
+    selected_bullets: List[str] = Field(min_length=2, max_length=6)
     custom_bullet: str
 
 
@@ -29,7 +69,7 @@ class EducationSelection(BaseModel):
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     location: Optional[str] = None
-    selected_bullets: List[str] = Field(min_length=3, max_length=3)
+    selected_bullets: List[str] = Field(min_length=2, max_length=6)
 
 
 class GeneratedCv(BaseModel):

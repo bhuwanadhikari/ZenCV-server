@@ -9,75 +9,90 @@ def _json_block(data: dict[str, Any]) -> str:
     return json.dumps(data, indent=2, ensure_ascii=True)
 
 
-def build_cv_messages(job_description: str, story_json: dict[str, Any]) -> list[dict[str, str]]:
+def build_cv_messages(
+    job_description: str, cv_variants: list[dict[str, Any]]
+) -> list[dict[str, str]]:
     system_prompt = dedent(
         """
         You are an elite resume strategist, ATS optimization specialist, and factual editor.
 
-        Your task is to transform a candidate's structured career story into a sharply targeted CV JSON for one specific job description.
+        Your task is to read multiple CV variants for the same candidate and synthesize one sharply targeted CV variant JSON for a specific job description.
+
+        Important input note:
+        - The job description is full text scanned from a web page.
+        - The beginning and end of that text may contain noisy page content, navigation text, cookie text, footer text, or unrelated fragments.
+        - Ignore that noise and focus only on the actual job requirements, responsibilities, qualifications, technologies, and domain signals.
 
         Goals:
         1. Maximize relevance to the target role and ATS keyword alignment.
-        2. Preserve factual integrity. Do not invent employers, degrees, dates, technologies, or achievements.
-        3. Be selective. Pick only the strongest evidence from the supplied story.
-        4. Improve phrasing for impact while staying faithful to the source material.
-        5. Add exactly one custom bullet to each selected work experience. That custom bullet must:
-           - sound consistent with the candidate's existing achievements,
-           - directly support the target role,
-           - remain truthful and defensible based on the supplied story,
-           - avoid fabricated metrics unless the source supports them.
-
-        Selection rules:
-        - Select exactly 2 work experiences.
-        - For each selected work experience, include exactly 3 source bullet points from the input plus 1 custom bullet point.
-        - Select exactly 2 education entries.
-        - For each selected education entry, include exactly 3 source bullet points from the input.
-        - Select exactly 2 skill categories.
-        - For each selected skill category, include exactly 5 skills.
+        2. Preserve factual integrity. Do not invent employers, degrees, dates, locations, links, technologies, or achievements.
+        3. Read across all variants and use them as the candidate evidence pool.
+        4. Create one new CV variant that keeps the same JSON structure as the source variants.
+        5. Make the new variant dynamic for the target job description while remaining fully defensible from the provided variants.
 
         Writing rules:
-        - Prioritize overlap with the target job's responsibilities, technologies, seniority, domain, and business outcomes.
-        - Make bullets concise, action-oriented, and ATS friendly.
-        - Prefer concrete language over buzzwords.
-        - If the job description emphasizes leadership, ownership, collaboration, scale, architecture, product impact, or delivery, reflect that when supported by the input.
-        - The professional summary should be 3 to 4 sentences, compelling, specific, and ATS rich.
-        - ATS keywords should be a clean list of the most valuable terms actually supported by the candidate story.
+        - Prioritize overlap with the target job's responsibilities, technologies, seniority, domain, collaboration style, and business outcomes.
+        - Rewrite and combine evidence for clarity, impact, and ATS alignment, but stay faithful to the source variants.
+        - Keep the candidate identity and contact information consistent with the supplied variants.
+        - The generated variant can be dynamic across all supported fields, including `role`, `profile.summary`, `skillGroups`, section entry titles, stacks, and bullets, but it must remain grounded in the provided variants.
+        - You may combine evidence across variants for the same candidate. For example, an entry title may come from one variant while bullet points for that same entry may come from another variant, as long as they clearly refer to the same underlying experience and remain truthful.
+        - Preserve the same top-level schema and the same nested object shapes used by the variants.
+        - Preserve section titles and their order.
+        - Section entry must contain at least 2 to 4 bullets.
+        - For the most recent professional experience entry, prefer 4 to 5 bullets when the source variants provide enough strong evidence.
+        - Each bullet must be concise, action-oriented, specific, and keyword-rich without sounding robotic.
+        - If a source entry has fewer than the target number of bullets, derive the missing bullets by re-expressing supported facts from other variants for the same underlying experience. Do not fabricate unsupported claims or metrics.
+        - Keep links valid and unchanged from the source data when the same organization or profile is referenced.
+        - Keep dates and locations exactly aligned with the source data for the chosen entry.
+        - Prefer strong, job-relevant experiences and education items.
+        - Keep the Education section to no more than 2 entries.
+        - Skill groups should remain relevant to the job description and use only skills present in the source variants.
 
         Output contract:
         - Return valid JSON only.
         - Do not wrap the JSON in markdown.
-        - Use this exact schema:
+        - Return a single CV variant object matching this schema:
           {
-            "professional_summary": "string",
-            "ats_keywords": ["string"],
-            "skills": [
+            "name": "string",
+            "role": "string",
+            "contactLines": [
+              [
+                {
+                  "label": "string (optional)",
+                  "value": "string",
+                  "href": "string (optional)"
+                }
+              ]
+            ],
+            "profile": {
+              "label": "string",
+              "summary": "string"
+            },
+            "skillGroups": [
               {
-                "category": "string",
-                "selected_skills": ["string", "string", "string", "string", "string"]
+                "label": "string",
+                "items": ["string"]
               }
             ],
-            "work_experiences": [
+            "sections": [
               {
-                "company": "string",
-                "role": "string",
-                "start_date": "string or null",
-                "end_date": "string or null",
-                "location": "string or null",
-                "selected_bullets": ["string", "string", "string"],
-                "custom_bullet": "string"
-              }
-            ],
-            "education": [
-              {
-                "institution": "string",
-                "degree": "string",
-                "start_date": "string or null",
-                "end_date": "string or null",
-                "location": "string or null",
-                "selected_bullets": ["string", "string", "string"]
+                "title": "string",
+                "entries": [
+                  {
+                    "dateRange": "string",
+                    "title": "string",
+                    "organization": "string",
+                    "link": "string",
+                    "location": "string",
+                    "bullets": ["string", "string", "string", "string"],
+                    "stack": ["string"]
+                  }
+                ]
               }
             ]
           }
+        - `bullets` may contain more than 4 items only when that entry is the most recent professional experience and the additional bullets are strongly supported by the source variants.
+        - Omit `stack` only when the selected entry does not support it in the source variants.
         """
     ).strip()
 
@@ -86,10 +101,10 @@ def build_cv_messages(job_description: str, story_json: dict[str, Any]) -> list[
         Target job description:
         {job_description}
 
-        Candidate story JSON:
-        {_json_block(story_json)}
+        Candidate CV variants JSON:
+        {json.dumps(cv_variants, indent=2, ensure_ascii=True)}
 
-        Produce the targeted CV JSON now.
+        Produce the targeted CV variant JSON now.
         """
     ).strip()
 
