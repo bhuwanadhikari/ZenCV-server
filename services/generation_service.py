@@ -30,15 +30,7 @@ CV_DATA_LIST_ADAPTER = TypeAdapter(list[CvData])
 @lru_cache
 def get_llm_service() -> LLMService:
     settings = get_settings()
-    print("FROM THE LLM SERVICE RUNNEE---------------")
     llm_service = LLMService(settings)
-    api_key = settings.llm_api_key
-    masked_api_key = (
-        "*" * max(len(api_key) - 4, 0) + api_key[-4:]
-        if len(api_key) > 4
-        else "*" * len(api_key)
-    )
-    print(f"Loaded LLM API key: {masked_api_key}")
     return llm_service
 
 
