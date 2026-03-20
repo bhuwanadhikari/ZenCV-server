@@ -37,7 +37,7 @@ For this use case, it is a very practical choice.
 Each `POST /api/cv/generate` call now also writes artifacts to `data/generated/<page_title>/`:
 
 - `generated_cv.json` with the raw generated CV JSON
-- `generated_cv.md` with the page title, job URL, and a YAML-formatted view of the generated CV
+- `generated_cv.md` with the page title, job URL, request token usage, estimated request cost, and a YAML-formatted view of the generated CV
 
 ## Setup
 
@@ -55,10 +55,13 @@ uvicorn main:app --reload
 - `LLM_MODEL`
 - `LLM_BASE_URL`
 - `LLM_TIMEOUT_SECONDS`
+- `LLM_INPUT_COST_PER_1M_TOKENS` (optional)
+- `LLM_OUTPUT_COST_PER_1M_TOKENS` (optional)
 - `MY_STORY_JSON_PATH`
 
 ## Notes
 
 - `LLM_BASE_URL` can point to OpenAI or another OpenAI-compatible provider such as DeepSeek.
+- If you use a model or provider without built-in pricing in the app, set `LLM_INPUT_COST_PER_1M_TOKENS` and `LLM_OUTPUT_COST_PER_1M_TOKENS` so the markdown artifact can show an estimated request cost.
 - The server currently allows all origins and skips authentication, matching your current development goal.
 - Replace `data/my_story.json` with your real story JSON structure and content.

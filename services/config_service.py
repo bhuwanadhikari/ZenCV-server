@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Optional
 
 from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -10,6 +11,12 @@ class Settings(BaseSettings):
     llm_model: str = Field(default="gpt-4.1-mini", alias="LLM_MODEL")
     llm_base_url: str = Field(default="https://api.openai.com/v1", alias="LLM_BASE_URL")
     llm_timeout_seconds: int = Field(default=60, alias="LLM_TIMEOUT_SECONDS")
+    llm_input_cost_per_1m_tokens: Optional[float] = Field(
+        default=None, alias="LLM_INPUT_COST_PER_1M_TOKENS"
+    )
+    llm_output_cost_per_1m_tokens: Optional[float] = Field(
+        default=None, alias="LLM_OUTPUT_COST_PER_1M_TOKENS"
+    )
     my_story_json_path: Path = Field(default=Path("data/my_story.json"), alias="MY_STORY_JSON_PATH")
 
     model_config = SettingsConfigDict(

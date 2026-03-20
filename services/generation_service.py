@@ -14,7 +14,7 @@ from schemas.generation_schema import (
     GenerateCvRequest,
 )
 from services.config_service import get_settings
-from services.llm_service import LLMService
+from services.llm_service import LLMService, LLMUsage
 from services.prompt_service import build_cover_letter_messages, build_cv_messages
 from services.story_service import load_story_json
 
@@ -140,6 +140,8 @@ def save_generated_cv_artifacts(
     page_title: str,
     job_url: str,
     generated_cv: CvData,
+    llm_model: str,
+    llm_usage: Optional[LLMUsage],
 ) -> Path:
     output_directory = build_generated_cv_directory(page_title)
     cv_payload = generated_cv.model_dump(mode="json")
@@ -152,6 +154,30 @@ def save_generated_cv_artifacts(
         json.dumps(cv_payload, indent=2, ensure_ascii=True) + "\n",
         encoding="utf-8",
     )
+
+    request_metrics_lines = [
+        "## Request Metrics",
+        "",
+        f"- Model: {llm_model}",
+    ]
+    if llm_usage is None:
+        request_metrics_lines.append("- Token Usage: Unavailable")
+        request_metrics_lines.append("- Estimated Cost (USD): Unavailable")
+    else:
+        request_metrics_lines.extend(
+            [
+                f"- Prompt Tokens: {llm_usage.prompt_tokens}",
+                f"- Completion Tokens: {llm_usage.completion_tokens}",
+                f"- Total Tokens: {llm_usage.total_tokens}",
+                "- Estimated Cost (USD): "
+                + (
+                    f"${llm_usage.estimated_cost_usd:.6f}"
+                    if llm_usage.estimated_cost_usd is not None
+                    else "Unavailable"
+                ),
+            ]
+        )
+
     markdown_path.write_text(
         "\n".join(
             [
@@ -159,6 +185,8 @@ def save_generated_cv_artifacts(
                 "",
                 f"- Page Title: {page_title}",
                 f"- Job URL: {job_url}",
+                "",
+                *request_metrics_lines,
                 "",
                 "## CV YAML",
                 "",
@@ -193,8 +221,8 @@ def generate_cv_content(request: GenerateCvRequest) -> CvData:
             job_description=request.job_description,
             cv_variants=[variant.model_dump(mode="json") for variant in cv_variants],
         )
-        llm_output = get_llm_service().generate_json(messages)
-        generated_cv = CV_DATA_ADAPTER.validate_python(llm_output)
+        llm_response = get_llm_service().generate_json(messages)
+        generated_cv = CV_DATA_ADAPTER.validate_python(llm_response.payload)
         validated_cv = validate_generated_cv(generated_cv)
         print(
             "Generated CV JSON:\n"
@@ -207,6 +235,8 @@ def generate_cv_content(request: GenerateCvRequest) -> CvData:
                 page_title=request.page_title,
                 job_url=request.job_url,
                 generated_cv=validated_cv,
+                llm_model=llm_response.model,
+                llm_usage=llm_response.usage,
             )
             print(f"Saved generated CV artifacts to: {output_directory}")
         except OSError as exc:
@@ -236,8 +266,8 @@ def generate_cover_letter_content(
             generated_cv=request.generated_cv,
             story_json=story_json,
         )
-        llm_output = get_llm_service().generate_json(messages)
-        cover_letter = llm_output["cover_letter"]
+        llm_response = get_llm_service().generate_json(messages)
+        cover_letter = llm_response.payload["cover_letter"]
         if not isinstance(cover_letter, str) or not cover_letter.strip():
             raise ValueError(
                 "LLM response did not include a valid cover_letter string."
