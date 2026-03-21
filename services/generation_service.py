@@ -2,7 +2,7 @@ import json
 import hashlib
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from fastapi import HTTPException
 from pydantic import TypeAdapter
@@ -22,8 +22,8 @@ CV_VARIANTS_EXAMPLE_PATH = Path("data/cv-data/cv_variants.example.json")
 GENERATED_CVS_PATH = Path("data/generated")
 GENERATED_CV_JSON_FILENAME = "generated_cv.json"
 GENERATED_CV_MARKDOWN_FILENAME = "generated_cv.md"
+GENERATED_CL_FILENAME = "generated_cl.txt"
 CV_YAML_SECTION_HEADING = "## CV YAML"
-COVER_LETTER_SECTION_HEADING = "## Cover Letter"
 CV_DATA_ADAPTER = TypeAdapter(CvData)
 CV_DATA_LIST_ADAPTER = TypeAdapter(list[CvData])
 
@@ -204,43 +204,44 @@ def append_markdown_sections(markdown_path: Path, sections: list[str]) -> None:
     markdown_path.write_text(appended_content + "\n", encoding="utf-8")
 
 
-def markdown_contains_cv_yaml(markdown_content: str) -> bool:
-    return CV_YAML_SECTION_HEADING in markdown_content
-
-
-def markdown_contains_cover_letter(markdown_content: str) -> bool:
-    return COVER_LETTER_SECTION_HEADING in markdown_content
-
-
-def reject_if_cv_already_generated(job_url: str) -> Optional[Path]:
+def load_cached_generated_cv(job_url: str) -> Optional[CvData]:
     output_directory = find_generated_cv_directory(job_url)
     if output_directory is None:
         return None
 
     json_path = output_directory / GENERATED_CV_JSON_FILENAME
-    markdown_path = output_directory / GENERATED_CV_MARKDOWN_FILENAME
-    markdown_content = read_markdown_content(markdown_path)
-    if json_path.exists() or markdown_contains_cv_yaml(markdown_content):
-        raise HTTPException(
-            status_code=409,
-            detail="A CV has already been generated for this job URL.",
-        )
-    return output_directory
+    if not json_path.exists():
+        return None
+
+    try:
+        cached_payload = json.loads(json_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"Failed to read cached CV from {json_path}: {exc}")
+        return None
+
+    try:
+        return CV_DATA_ADAPTER.validate_python(cached_payload)
+    except ValueError as exc:
+        print(f"Cached CV at {json_path} is invalid: {exc}")
+        return None
 
 
-def reject_if_cover_letter_already_generated(job_url: str) -> Optional[Path]:
+def load_cached_cover_letter(job_url: str) -> Optional[str]:
     output_directory = find_generated_cv_directory(job_url)
     if output_directory is None:
         return None
 
-    markdown_path = output_directory / GENERATED_CV_MARKDOWN_FILENAME
-    markdown_content = read_markdown_content(markdown_path)
-    if markdown_contains_cover_letter(markdown_content):
-        raise HTTPException(
-            status_code=409,
-            detail="A cover letter has already been generated for this job URL.",
-        )
-    return output_directory
+    cover_letter_path = output_directory / GENERATED_CL_FILENAME
+    if not cover_letter_path.exists():
+        return None
+
+    try:
+        cover_letter = cover_letter_path.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        print(f"Failed to read cached cover letter from {cover_letter_path}: {exc}")
+        return None
+
+    return cover_letter or None
 
 
 def save_generated_cv_artifacts(
@@ -293,43 +294,25 @@ def save_generated_cv_artifacts(
 
 def save_generated_cover_letter_artifacts(
     *,
-    page_title: str,
     job_url: str,
     cover_letter: str,
-    llm_model: str,
-    llm_usage: Optional[LLMUsage],
 ) -> Path:
     output_directory = find_generated_cv_directory(job_url) or build_generated_cv_directory(
         job_url
     )
     output_directory.mkdir(parents=True, exist_ok=True)
-    markdown_path = output_directory / GENERATED_CV_MARKDOWN_FILENAME
+    cover_letter_path = output_directory / GENERATED_CL_FILENAME
+    normalized_cover_letter = cover_letter.strip()
 
-    markdown_sections = []
-    if not markdown_path.exists():
-        markdown_sections.extend(build_markdown_header(page_title, job_url))
-
-    markdown_sections.extend(
-        [
-            "",
-            *build_request_metrics_lines(
-                artifact_label="Cover Letter",
-                llm_model=llm_model,
-                llm_usage=llm_usage,
-            ),
-            "",
-            COVER_LETTER_SECTION_HEADING,
-            "",
-            cover_letter.strip(),
-        ]
-    )
-    append_markdown_sections(markdown_path, markdown_sections)
+    cover_letter_path.write_text(normalized_cover_letter + "\n", encoding="utf-8")
 
     return output_directory
 
 
 def generate_cv_content(request: GenerateCvRequest) -> CvData:
-    reject_if_cv_already_generated(request.job_url)
+    cached_cv = load_cached_generated_cv(request.job_url)
+    if cached_cv is not None:
+        return cached_cv
 
     try:
         cv_variants = get_cv_variants()
@@ -387,7 +370,9 @@ def generate_cv_content(request: GenerateCvRequest) -> CvData:
 def generate_cover_letter_content(
     request: GenerateCoverLetterRequest,
 ) -> GenerateCoverLetterResponse:
-    reject_if_cover_letter_already_generated(request.job_url)
+    cached_cover_letter = load_cached_cover_letter(request.job_url)
+    if cached_cover_letter is not None:
+        return GenerateCoverLetterResponse(cover_letter=cached_cover_letter)
 
     try:
         cv_variants = get_cv_variants()
@@ -403,12 +388,18 @@ def generate_cover_letter_content(
         ) from exc
 
     try:
+        generated_cv = request.generated_cv
+        if generated_cv is None:
+            cached_cv = load_cached_generated_cv(request.job_url)
+            if cached_cv is not None:
+                generated_cv = cached_cv.model_dump(mode="json")
+
         messages = build_cover_letter_messages(
             page_title=request.page_title,
             job_url=request.job_url,
             job_description=request.job_description,
             cv_variants=[variant.model_dump(mode="json") for variant in cv_variants],
-            generated_cv=request.generated_cv,
+            generated_cv=generated_cv,
             story_json=request.story_json_override,
         )
         llm_response = get_llm_service().generate_json(messages)
@@ -419,11 +410,8 @@ def generate_cover_letter_content(
             )
         try:
             output_directory = save_generated_cover_letter_artifacts(
-                page_title=request.page_title,
                 job_url=request.job_url,
                 cover_letter=cover_letter,
-                llm_model=llm_response.model,
-                llm_usage=llm_response.usage,
             )
             print(f"Saved generated cover letter artifacts to: {output_directory}")
         except OSError as exc:
