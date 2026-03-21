@@ -115,40 +115,50 @@ def build_cv_messages(
 
 
 def build_cover_letter_messages(
+    page_title: str,
+    job_url: str,
     job_description: str,
-    generated_cv: dict[str, Any],
-    story_json: dict[str, Any],
+    cv_variants: list[dict[str, Any]],
+    generated_cv: dict[str, Any] | None,
+    story_json: dict[str, Any] | None = None,
 ) -> list[dict[str, str]]:
     system_prompt = dedent(
         """
-        You are an expert cover-letter writer focused on three things at once:
-        1. genuine narrative quality,
-        2. strong ATS alignment,
-        3. strict factual consistency.
+        You are an elite cover-letter strategist, ATS-aware application writer, and factual editor.
 
         You will receive:
-        - the target job description,
-        - a tailored CV JSON already optimized for the role,
-        - the broader candidate story JSON.
+        - page metadata from the frontend,
+        - the target job description text from the job page,
+        - CV variants JSON for the same candidate loaded from the backend data files,
+        - an optional tailored CV JSON if one has already been generated,
+        - optional story JSON for extra supporting context.
 
-        Your job is to write a compelling cover letter that feels like a believable career story, not a generic template.
+        Your job is to write one highly targeted cover letter that sounds credible, specific, and human, not generic or templated.
 
         Requirements:
-        - Use the tailored CV as the primary source of emphasis.
-        - Use the broader story JSON as supporting context for depth and continuity.
-        - Make the candidate's journey feel intentional and interesting to a hiring manager.
-        - Reflect the job's priorities, terminology, and likely ATS keywords.
-        - Keep the tone confident, warm, and professional.
+        - Treat the job description as noisy webpage text. Ignore navigation, cookie banners, footer fragments, and unrelated text.
+        - Use the tailored CV JSON as the primary emphasis source when it is provided.
+        - Always use the CV variants JSON as the factual evidence pool.
+        - Use optional story JSON only as supporting context, never as a reason to invent facts.
+        - Reflect the job's priorities, terminology, domain language, and ATS keywords naturally.
+        - Keep the tone confident, warm, professional, and concise.
         - Do not fabricate facts, employers, education, tools, or quantified outcomes.
-        - Avoid placeholder text such as company name brackets unless the source actually contains a name.
-        - Avoid exaggerated flattery and generic claims.
+        - Do not mention experiences or technologies unless they are supported by the supplied CV data.
+        - Avoid placeholders, exaggerated flattery, and generic claims.
+        - Write for approximately one A4 page at 12 px font size.
+        - Target about 250 to 380 words total and never exceed 420 words.
 
         Structure:
-        - 4 to 6 paragraphs.
-        - Open with role alignment and motivation.
-        - Middle paragraphs should connect the candidate's strongest experiences and skills to the target role.
-        - Include evidence of ownership, outcomes, collaboration, and technical depth when supported.
-        - End with a forward-looking close.
+        - Include a salutation as the first line of the letter.
+        - If a hiring contact is not provided, use a professional generic salutation such as "Dear Hiring Team,".
+        - Use 4 or 5 paragraphs.
+        - Paragraph 1 after the salutation: role fit, motivation, and a specific hook tied to the opportunity.
+        - Paragraphs 2 and 3: connect the most relevant experience, technologies, ownership, collaboration, and outcomes to the role.
+        - Paragraph 4: explain why the candidate is a strong match for the team or product context now.
+        - Optional paragraph 5: concise forward-looking close.
+        - End with a professional closing line and candidate sign-off.
+        - Do not include postal addresses, date headers, subject lines, or signature blocks.
+        - Return plain body text only inside JSON.
 
         Output contract:
         - Return valid JSON only.
@@ -162,14 +172,23 @@ def build_cover_letter_messages(
 
     user_prompt = dedent(
         f"""
+        Page metadata from frontend:
+        {{
+          "page_title": {json.dumps(page_title, ensure_ascii=True)},
+          "job_url": {json.dumps(job_url, ensure_ascii=True)}
+        }}
+
         Target job description:
         {job_description}
 
+        Candidate CV variants JSON:
+        {json.dumps(cv_variants, indent=2, ensure_ascii=True)}
+
         Tailored CV JSON:
-        {_json_block(generated_cv)}
+        {_json_block(generated_cv) if generated_cv is not None else "null"}
 
         Candidate story JSON:
-        {_json_block(story_json)}
+        {_json_block(story_json) if story_json is not None else "null"}
 
         Write the cover letter now.
         """

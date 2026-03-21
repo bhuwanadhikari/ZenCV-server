@@ -1,5 +1,5 @@
 import json
-import re
+import hashlib
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -16,13 +16,14 @@ from schemas.generation_schema import (
 from services.config_service import get_settings
 from services.llm_service import LLMService, LLMUsage
 from services.prompt_service import build_cover_letter_messages, build_cv_messages
-from services.story_service import load_story_json
 
 CV_VARIANTS_PATH = Path("data/cv-data/cv_variants.json")
 CV_VARIANTS_EXAMPLE_PATH = Path("data/cv-data/cv_variants.example.json")
 GENERATED_CVS_PATH = Path("data/generated")
 GENERATED_CV_JSON_FILENAME = "generated_cv.json"
 GENERATED_CV_MARKDOWN_FILENAME = "generated_cv.md"
+CV_YAML_SECTION_HEADING = "## CV YAML"
+COVER_LETTER_SECTION_HEADING = "## Cover Letter"
 CV_DATA_ADAPTER = TypeAdapter(CvData)
 CV_DATA_LIST_ADAPTER = TypeAdapter(list[CvData])
 
@@ -32,13 +33,6 @@ def get_llm_service() -> LLMService:
     settings = get_settings()
     llm_service = LLMService(settings)
     return llm_service
-
-
-def resolve_story_json(override: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    if override is not None:
-        return override
-    settings = get_settings()
-    return load_story_json(settings.my_story_json_path)
 
 
 def load_cv_variants(path: Path) -> list[CvData]:
@@ -66,25 +60,35 @@ def validate_generated_cv(cv_data: CvData) -> CvData:
     return cv_data
 
 
-def sanitize_page_title(page_title: str) -> str:
-    cleaned = re.sub(r'[<>:"/\\|?*\x00-\x1F]', "", page_title).strip().rstrip(".")
-    cleaned = re.sub(r"\s+", " ", cleaned)
-    return cleaned or "Untitled Page"
+def hash_job_url(job_url: str) -> str:
+    normalized_job_url = job_url.strip()
+    return hashlib.sha256(normalized_job_url.encode("utf-8")).hexdigest()[:16]
 
 
-def build_generated_cv_directory(page_title: str) -> Path:
+def build_generated_cv_directory(job_url: str) -> Path:
     GENERATED_CVS_PATH.mkdir(parents=True, exist_ok=True)
-    base_name = sanitize_page_title(page_title)
+    return GENERATED_CVS_PATH / hash_job_url(job_url)
 
-    counter = 1
-    while True:
-        folder_name = base_name if counter == 1 else f"{base_name} ({counter})"
-        directory = GENERATED_CVS_PATH / folder_name
+
+# TODO: later use the cv json that's previously generated to make better cover letter
+def find_generated_cv_directory(job_url: str) -> Optional[Path]:
+    GENERATED_CVS_PATH.mkdir(parents=True, exist_ok=True)
+    hashed_directory = build_generated_cv_directory(job_url)
+    if hashed_directory.is_dir():
+        return hashed_directory
+
+    folder_suffix = f"__{hash_job_url(job_url)}"
+    matches = sorted(
+        path for path in GENERATED_CVS_PATH.glob(f"*{folder_suffix}") if path.is_dir()
+    )
+    if matches:
+        legacy_directory = matches[0]
         try:
-            directory.mkdir()
-            return directory
-        except FileExistsError:
-            counter += 1
+            legacy_directory.rename(hashed_directory)
+            return hashed_directory
+        except OSError:
+            return legacy_directory
+    return None
 
 
 def yaml_scalar(value: Any) -> str:
@@ -135,6 +139,110 @@ def to_yaml_string(value: Any) -> str:
     return "\n".join(to_yaml_lines(value))
 
 
+def escape_markdown_link_text(value: str) -> str:
+    return value.replace("[", "\\[").replace("]", "\\]")
+
+
+def build_markdown_header(page_title: str, job_url: str) -> list[str]:
+    escaped_title = escape_markdown_link_text(page_title)
+    return [
+        "# Generated Application",
+        "",
+        f"- Page: [{escaped_title}]({job_url})",
+    ]
+
+
+def build_request_metrics_lines(
+    *,
+    artifact_label: str,
+    llm_model: str,
+    llm_usage: Optional[LLMUsage],
+) -> list[str]:
+    lines = [
+        f"## {artifact_label} Request Metrics",
+        "",
+        f"- Model: {llm_model}",
+    ]
+    if llm_usage is None:
+        lines.append("- Token Usage: Unavailable")
+        lines.append("- Estimated Cost (USD): Unavailable")
+        return lines
+
+    lines.extend(
+        [
+            f"- Prompt Tokens: {llm_usage.prompt_tokens}",
+            f"- Completion Tokens: {llm_usage.completion_tokens}",
+            f"- Total Tokens: {llm_usage.total_tokens}",
+            "- Estimated Cost (USD): "
+            + (
+                f"${llm_usage.estimated_cost_usd:.6f}"
+                if llm_usage.estimated_cost_usd is not None
+                else "Unavailable"
+            ),
+        ]
+    )
+    return lines
+
+
+def read_markdown_content(markdown_path: Path) -> str:
+    if not markdown_path.exists():
+        return ""
+    return markdown_path.read_text(encoding="utf-8")
+
+
+def append_markdown_sections(markdown_path: Path, sections: list[str]) -> None:
+    existing_content = read_markdown_content(markdown_path).rstrip()
+    appended_content = "\n".join(sections).strip()
+
+    if existing_content:
+        markdown_path.write_text(
+            existing_content + "\n\n" + appended_content + "\n",
+            encoding="utf-8",
+        )
+        return
+
+    markdown_path.write_text(appended_content + "\n", encoding="utf-8")
+
+
+def markdown_contains_cv_yaml(markdown_content: str) -> bool:
+    return CV_YAML_SECTION_HEADING in markdown_content
+
+
+def markdown_contains_cover_letter(markdown_content: str) -> bool:
+    return COVER_LETTER_SECTION_HEADING in markdown_content
+
+
+def reject_if_cv_already_generated(job_url: str) -> Optional[Path]:
+    output_directory = find_generated_cv_directory(job_url)
+    if output_directory is None:
+        return None
+
+    json_path = output_directory / GENERATED_CV_JSON_FILENAME
+    markdown_path = output_directory / GENERATED_CV_MARKDOWN_FILENAME
+    markdown_content = read_markdown_content(markdown_path)
+    if json_path.exists() or markdown_contains_cv_yaml(markdown_content):
+        raise HTTPException(
+            status_code=409,
+            detail="A CV has already been generated for this job URL.",
+        )
+    return output_directory
+
+
+def reject_if_cover_letter_already_generated(job_url: str) -> Optional[Path]:
+    output_directory = find_generated_cv_directory(job_url)
+    if output_directory is None:
+        return None
+
+    markdown_path = output_directory / GENERATED_CV_MARKDOWN_FILENAME
+    markdown_content = read_markdown_content(markdown_path)
+    if markdown_contains_cover_letter(markdown_content):
+        raise HTTPException(
+            status_code=409,
+            detail="A cover letter has already been generated for this job URL.",
+        )
+    return output_directory
+
+
 def save_generated_cv_artifacts(
     *,
     page_title: str,
@@ -143,7 +251,10 @@ def save_generated_cv_artifacts(
     llm_model: str,
     llm_usage: Optional[LLMUsage],
 ) -> Path:
-    output_directory = build_generated_cv_directory(page_title)
+    output_directory = find_generated_cv_directory(job_url) or build_generated_cv_directory(
+        job_url
+    )
+    output_directory.mkdir(parents=True, exist_ok=True)
     cv_payload = generated_cv.model_dump(mode="json")
     yaml_content = to_yaml_string(cv_payload)
 
@@ -155,54 +266,71 @@ def save_generated_cv_artifacts(
         encoding="utf-8",
     )
 
-    request_metrics_lines = [
-        "## Request Metrics",
-        "",
-        f"- Model: {llm_model}",
-    ]
-    if llm_usage is None:
-        request_metrics_lines.append("- Token Usage: Unavailable")
-        request_metrics_lines.append("- Estimated Cost (USD): Unavailable")
-    else:
-        request_metrics_lines.extend(
-            [
-                f"- Prompt Tokens: {llm_usage.prompt_tokens}",
-                f"- Completion Tokens: {llm_usage.completion_tokens}",
-                f"- Total Tokens: {llm_usage.total_tokens}",
-                "- Estimated Cost (USD): "
-                + (
-                    f"${llm_usage.estimated_cost_usd:.6f}"
-                    if llm_usage.estimated_cost_usd is not None
-                    else "Unavailable"
-                ),
-            ]
-        )
+    markdown_sections = []
+    if not markdown_path.exists():
+        markdown_sections.extend(build_markdown_header(page_title, job_url))
 
-    markdown_path.write_text(
-        "\n".join(
-            [
-                "# Generated CV",
-                "",
-                f"- Page Title: {page_title}",
-                f"- Job URL: {job_url}",
-                "",
-                *request_metrics_lines,
-                "",
-                "## CV YAML",
-                "",
-                "```yaml",
-                yaml_content,
-                "```",
-                "",
-            ]
-        ),
-        encoding="utf-8",
+    markdown_sections.extend(
+        [
+            "",
+            *build_request_metrics_lines(
+                artifact_label="CV",
+                llm_model=llm_model,
+                llm_usage=llm_usage,
+            ),
+            "",
+            CV_YAML_SECTION_HEADING,
+            "",
+            "```yaml",
+            yaml_content,
+            "```",
+        ]
     )
+    append_markdown_sections(markdown_path, markdown_sections)
+
+    return output_directory
+
+
+def save_generated_cover_letter_artifacts(
+    *,
+    page_title: str,
+    job_url: str,
+    cover_letter: str,
+    llm_model: str,
+    llm_usage: Optional[LLMUsage],
+) -> Path:
+    output_directory = find_generated_cv_directory(job_url) or build_generated_cv_directory(
+        job_url
+    )
+    output_directory.mkdir(parents=True, exist_ok=True)
+    markdown_path = output_directory / GENERATED_CV_MARKDOWN_FILENAME
+
+    markdown_sections = []
+    if not markdown_path.exists():
+        markdown_sections.extend(build_markdown_header(page_title, job_url))
+
+    markdown_sections.extend(
+        [
+            "",
+            *build_request_metrics_lines(
+                artifact_label="Cover Letter",
+                llm_model=llm_model,
+                llm_usage=llm_usage,
+            ),
+            "",
+            COVER_LETTER_SECTION_HEADING,
+            "",
+            cover_letter.strip(),
+        ]
+    )
+    append_markdown_sections(markdown_path, markdown_sections)
 
     return output_directory
 
 
 def generate_cv_content(request: GenerateCvRequest) -> CvData:
+    reject_if_cv_already_generated(request.job_url)
+
     try:
         cv_variants = get_cv_variants()
     except FileNotFoundError as exc:
@@ -259,12 +387,29 @@ def generate_cv_content(request: GenerateCvRequest) -> CvData:
 def generate_cover_letter_content(
     request: GenerateCoverLetterRequest,
 ) -> GenerateCoverLetterResponse:
+    reject_if_cover_letter_already_generated(request.job_url)
+
     try:
-        story_json = resolve_story_json(request.story_json_override)
+        cv_variants = get_cv_variants()
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=500, detail=f"CV variants file not found: {exc}"
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to load CV variants: {exc}"
+        ) from exc
+
+    try:
         messages = build_cover_letter_messages(
+            page_title=request.page_title,
+            job_url=request.job_url,
             job_description=request.job_description,
+            cv_variants=[variant.model_dump(mode="json") for variant in cv_variants],
             generated_cv=request.generated_cv,
-            story_json=story_json,
+            story_json=request.story_json_override,
         )
         llm_response = get_llm_service().generate_json(messages)
         cover_letter = llm_response.payload["cover_letter"]
@@ -272,10 +417,26 @@ def generate_cover_letter_content(
             raise ValueError(
                 "LLM response did not include a valid cover_letter string."
             )
-    except FileNotFoundError as exc:
+        try:
+            output_directory = save_generated_cover_letter_artifacts(
+                page_title=request.page_title,
+                job_url=request.job_url,
+                cover_letter=cover_letter,
+                llm_model=llm_response.model,
+                llm_usage=llm_response.usage,
+            )
+            print(f"Saved generated cover letter artifacts to: {output_directory}")
+        except OSError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to save generated cover letter artifacts: {exc}",
+            ) from exc
+    except ValueError as exc:
         raise HTTPException(
-            status_code=500, detail=f"Story JSON file not found: {exc}"
+            status_code=502, detail=f"Invalid generated cover letter: {exc}"
         ) from exc
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(
             status_code=502, detail=f"Failed to generate cover letter: {exc}"

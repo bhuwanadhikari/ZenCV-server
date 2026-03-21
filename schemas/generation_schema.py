@@ -87,8 +87,10 @@ class GenerateCvResponse(BaseModel):
 
 
 class GenerateCoverLetterRequest(BaseModel):
+    page_title: str = Field(min_length=1)
+    job_url: str = Field(min_length=1)
     job_description: str = Field(min_length=20)
-    generated_cv: Dict[str, Any]
+    generated_cv: Optional[Dict[str, Any]] = None
     story_json_override: Optional[Dict[str, Any]] = None
 
 
