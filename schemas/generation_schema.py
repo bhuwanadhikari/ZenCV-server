@@ -10,6 +10,15 @@ class GenerateCvRequest(BaseModel):
     story_json_override: Optional[Dict[str, Any]] = None
 
 
+class ProcessCvHtmlRequest(BaseModel):
+    raw_html: str = Field(min_length=1)
+
+
+class ProcessedCvHtmlResponse(BaseModel):
+    processed_text: str
+    processed_html: str
+
+
 class CvContactItem(BaseModel):
     label: Optional[str] = None
     value: str

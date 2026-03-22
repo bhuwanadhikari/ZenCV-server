@@ -7,10 +7,13 @@ from schemas.generation_schema import (
     GenerateCoverLetterRequest,
     GenerateCoverLetterResponse,
     GenerateCvRequest,
+    ProcessCvHtmlRequest,
+    ProcessedCvHtmlResponse,
 )
 from services.generation_service import (
     generate_cover_letter_content,
     generate_cv_content,
+    process_cv_html_content,
 )
 
 
@@ -32,6 +35,22 @@ def generate_cv(request: GenerateCvRequest) -> CvData:
         raise
     except Exception:
         logger.exception("Unexpected error in CV generation route.")
+        raise
+
+
+@router.post(
+    "/api/job-description/process", response_model=ProcessedCvHtmlResponse
+)
+def process_job_description(
+    request: ProcessCvHtmlRequest,
+) -> ProcessedCvHtmlResponse:
+    try:
+        return process_cv_html_content(request)
+    except HTTPException:
+        logger.exception("Job description processing route failed.")
+        raise
+    except Exception:
+        logger.exception("Unexpected error in job description processing route.")
         raise
 
 

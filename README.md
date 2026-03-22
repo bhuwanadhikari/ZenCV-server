@@ -21,6 +21,7 @@ For this use case, it is a very practical choice.
 
 - `GET /health`
 - `POST /api/cv/generate`
+- `POST /api/job-description/process`
 - `POST /api/cover-letter/generate`
 
 ### CV generate request body
@@ -38,6 +39,16 @@ Each `POST /api/cv/generate` call now also writes artifacts to `data/generated/<
 
 - `generated_cv.json` with the raw generated CV JSON
 - `generated_cv.md` with the page title, job URL, request token usage, estimated request cost, and a YAML-formatted view of the generated CV
+
+### Job description process request body
+
+```json
+{
+  "raw_html": "<html><body><header>...</header><main>Job description...</main><footer>...</footer></body></html>"
+}
+```
+
+`POST /api/job-description/process` currently cleans the incoming HTML, finds the common parent of the top 5 longest leaf-text elements, and returns newline-separated plain text from that region in both `processed_html` and `processed_text`.
 
 ## Setup
 
