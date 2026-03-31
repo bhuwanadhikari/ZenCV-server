@@ -38,7 +38,7 @@ For this use case, it is a very practical choice.
 Each `POST /api/cv/generate` call now also writes artifacts to `data/generated/<page_title>/`:
 
 - `generated_cv.json` with the raw generated CV JSON
-- `generated_cv.md` with the page title, job URL, request token usage, estimated request cost, and a YAML-formatted view of the generated CV
+- `generation_summary.md` with appended JD, CV, and cover letter generations plus request token usage and estimated cost for each LLM task
 
 ### Job description process request body
 
@@ -49,6 +49,7 @@ Each `POST /api/cv/generate` call now also writes artifacts to `data/generated/<
 ```
 
 `POST /api/job-description/process` currently cleans the incoming HTML, finds the common parent of the top 5 longest leaf-text elements, and returns newline-separated plain text from that region in both `processed_html` and `processed_text`.
+When LLM-based JD extraction is enabled, it also persists the extracted job description and appends it to `generation_summary.md` with request metrics.
 
 ## Setup
 

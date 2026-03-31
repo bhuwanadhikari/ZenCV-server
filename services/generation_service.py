@@ -24,10 +24,9 @@ CV_VARIANTS_PATH = Path("data/cv-data/cv_variants.json")
 CV_VARIANTS_EXAMPLE_PATH = Path("data/cv-data/cv_variants.example.json")
 GENERATED_CVS_PATH = Path("data/generated")
 GENERATED_CV_JSON_FILENAME = "generated_cv.json"
-GENERATED_CV_MARKDOWN_FILENAME = "generated_cv.md"
+GENERATION_SUMMARY_FILENAME = "generation_summary.md"
 GENERATED_CL_FILENAME = "generated_cl.txt"
 GENERATED_JD_FILENAME = "generated_jd.txt"
-CV_YAML_SECTION_HEADING = "## CV YAML"
 CV_DATA_ADAPTER = TypeAdapter(CvData)
 CV_DATA_LIST_ADAPTER = TypeAdapter(list[CvData])
 USE_LLM_TO_EXTRACT_JD = True  # Set to True to use LLM for job description extraction
@@ -182,27 +181,15 @@ def to_yaml_string(value: Any) -> str:
     return "\n".join(to_yaml_lines(value))
 
 
-def escape_markdown_link_text(value: str) -> str:
-    return value.replace("[", "\\[").replace("]", "\\]")
-
-
-def build_markdown_header(page_title: str, job_url: str) -> list[str]:
-    escaped_title = escape_markdown_link_text(page_title)
-    return [
-        "# Generated Application",
-        "",
-        f"- Page: [{escaped_title}]({job_url})",
-    ]
-
-
 def build_request_metrics_lines(
     *,
     artifact_label: str,
     llm_model: str,
     llm_usage: Optional[LLMUsage],
+    heading_prefix: str = "##",
 ) -> list[str]:
     lines = [
-        f"## {artifact_label} Request Metrics",
+        f"{heading_prefix} {artifact_label} Request Metrics",
         "",
         f"- Model: {llm_model}",
     ]
@@ -245,6 +232,40 @@ def append_markdown_sections(markdown_path: Path, sections: list[str]) -> None:
         return
 
     markdown_path.write_text(appended_content + "\n", encoding="utf-8")
+
+
+def append_generation_summary(
+    *,
+    output_directory: Path,
+    artifact_label: str,
+    content: str,
+    content_language: str,
+    llm_model: str,
+    llm_usage: Optional[LLMUsage],
+) -> None:
+    summary_path = output_directory / GENERATION_SUMMARY_FILENAME
+    summary_sections: list[str] = []
+
+    if not summary_path.exists():
+        summary_sections.extend(["# Generation Summary", ""])
+
+    summary_sections.extend(
+        [
+            f"## {artifact_label}",
+            "",
+            *build_request_metrics_lines(
+                artifact_label=artifact_label,
+                llm_model=llm_model,
+                llm_usage=llm_usage,
+                heading_prefix="###",
+            ),
+            "",
+            f"```{content_language}",
+            content.strip(),
+            "```",
+        ]
+    )
+    append_markdown_sections(summary_path, summary_sections)
 
 
 def load_cached_generated_cv(job_url: str) -> Optional[CvData]:
@@ -308,7 +329,9 @@ def load_cached_job_description(job_url: str) -> Optional[str]:
 
 def save_job_description(job_url: str, job_description: str) -> Path:
     """Save extracted job description to file."""
-    output_directory = find_generated_cv_directory(job_url) or build_generated_cv_directory(job_url)
+    output_directory = find_generated_cv_directory(job_url) or build_generated_cv_directory(
+        job_url
+    )
     output_directory.mkdir(parents=True, exist_ok=True)
 
     jd_path = output_directory / GENERATED_JD_FILENAME
@@ -319,7 +342,6 @@ def save_job_description(job_url: str, job_description: str) -> Path:
 
 def save_generated_cv_artifacts(
     *,
-    page_title: str,
     job_url: str,
     generated_cv: CvData,
     llm_model: str,
@@ -333,34 +355,19 @@ def save_generated_cv_artifacts(
     yaml_content = to_yaml_string(cv_payload)
 
     json_path = output_directory / GENERATED_CV_JSON_FILENAME
-    markdown_path = output_directory / GENERATED_CV_MARKDOWN_FILENAME
 
     json_path.write_text(
         json.dumps(cv_payload, indent=2, ensure_ascii=True) + "\n",
         encoding="utf-8",
     )
-
-    markdown_sections = []
-    if not markdown_path.exists():
-        markdown_sections.extend(build_markdown_header(page_title, job_url))
-
-    markdown_sections.extend(
-        [
-            "",
-            *build_request_metrics_lines(
-                artifact_label="CV",
-                llm_model=llm_model,
-                llm_usage=llm_usage,
-            ),
-            "",
-            CV_YAML_SECTION_HEADING,
-            "",
-            "```yaml",
-            yaml_content,
-            "```",
-        ]
+    append_generation_summary(
+        output_directory=output_directory,
+        artifact_label="CV",
+        content=yaml_content,
+        content_language="yaml",
+        llm_model=llm_model,
+        llm_usage=llm_usage,
     )
-    append_markdown_sections(markdown_path, markdown_sections)
 
     return output_directory
 
@@ -369,6 +376,8 @@ def save_generated_cover_letter_artifacts(
     *,
     job_url: str,
     cover_letter: str,
+    llm_model: str,
+    llm_usage: Optional[LLMUsage],
 ) -> Path:
     output_directory = find_generated_cv_directory(job_url) or build_generated_cv_directory(
         job_url
@@ -378,6 +387,14 @@ def save_generated_cover_letter_artifacts(
     normalized_cover_letter = cover_letter.strip()
 
     cover_letter_path.write_text(normalized_cover_letter + "\n", encoding="utf-8")
+    append_generation_summary(
+        output_directory=output_directory,
+        artifact_label="Cover Letter",
+        content=normalized_cover_letter,
+        content_language="text",
+        llm_model=llm_model,
+        llm_usage=llm_usage,
+    )
 
     return output_directory
 
@@ -413,7 +430,7 @@ def extract_text_from_body_element(body_element: Any) -> str:
     return "\n".join(text_lines)
 
 
-def extract_job_description_with_llm(text_content: str) -> str:
+def extract_job_description_with_llm(text_content: str) -> tuple[str, str, Optional[LLMUsage]]:
     """
     Use LLM to extract job description details from plain text.
     Sends the text with an advanced prompt to extract:
@@ -432,10 +449,10 @@ def extract_job_description_with_llm(text_content: str) -> str:
 
     try:
         response = llm_service.generate_text(messages)
-        return response
+        return response.content, response.model, response.usage
     except Exception as e:
         print(f"LLM extraction failed: {e}. Falling back to original text.")
-        return text_content
+        return text_content, llm_service.model_name, None
 
 
 def extract_body_html(raw_html: str, job_url: Optional[str] = None) -> str:
@@ -587,11 +604,23 @@ def extract_body_html(raw_html: str, job_url: Optional[str] = None) -> str:
     # Use LLM-based extraction if enabled and job_url is provided
     if USE_LLM_TO_EXTRACT_JD and job_url:
         text_content = extract_text_from_body_element(body_element)
-        extracted_description = extract_job_description_with_llm(text_content)
-        
+        (
+            extracted_description,
+            llm_model,
+            llm_usage,
+        ) = extract_job_description_with_llm(text_content)
+
         # Save the extracted job description
-        save_job_description(job_url, extracted_description)
-        
+        output_directory = save_job_description(job_url, extracted_description)
+        append_generation_summary(
+            output_directory=output_directory,
+            artifact_label="Job Description",
+            content=extracted_description,
+            content_language="text",
+            llm_model=llm_model,
+            llm_usage=llm_usage,
+        )
+
         return extracted_description
 
     # Otherwise, continue with the original extraction method (Steps 6-9)
@@ -707,7 +736,6 @@ def generate_cv_content(request: GenerateCvRequest) -> CvData:
         )
         try:
             output_directory = save_generated_cv_artifacts(
-                page_title=request.page_title,
                 job_url=request.job_url,
                 generated_cv=validated_cv,
                 llm_model=llm_response.model,
@@ -780,6 +808,8 @@ def generate_cover_letter_content(
             output_directory = save_generated_cover_letter_artifacts(
                 job_url=request.job_url,
                 cover_letter=cover_letter,
+                llm_model=llm_response.model,
+                llm_usage=llm_response.usage,
             )
             print(f"Saved generated cover letter artifacts to: {output_directory}")
         except OSError as exc:

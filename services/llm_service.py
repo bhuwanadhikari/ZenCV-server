@@ -24,6 +24,13 @@ class LLMJsonResponse:
     model: str
 
 
+@dataclass(frozen=True)
+class LLMTextResponse:
+    content: str
+    usage: LLMUsage | None
+    model: str
+
+
 class LLMService:
     _DEFAULT_MODEL_PRICING_PER_1M_TOKENS: dict[str, tuple[float, float]] = {
         "gpt-4.1-mini": (0.40, 1.60),
@@ -38,6 +45,10 @@ class LLMService:
         self._model = settings.llm_model
         self._input_cost_per_1m_tokens = settings.llm_input_cost_per_1m_tokens
         self._output_cost_per_1m_tokens = settings.llm_output_cost_per_1m_tokens
+
+    @property
+    def model_name(self) -> str:
+        return self._model
 
     def generate_json(self, messages: list[dict[str, str]]) -> LLMJsonResponse:
         response = self._client.chat.completions.create(
@@ -55,8 +66,8 @@ class LLMService:
             model=response.model or self._model,
         )
 
-    def generate_text(self, messages: list[dict[str, str]]) -> str:
-        """Generate plain text response (not JSON)."""
+    def generate_text(self, messages: list[dict[str, str]]) -> LLMTextResponse:
+        """Generate plain text response with request metadata."""
         response = self._client.chat.completions.create(
             model=self._model,
             messages=messages,
@@ -65,7 +76,11 @@ class LLMService:
         content = response.choices[0].message.content
         if not content:
             raise ValueError("LLM returned an empty response.")
-        return content.strip()
+        return LLMTextResponse(
+            content=content.strip(),
+            usage=self._build_usage(response),
+            model=response.model or self._model,
+        )
 
     @staticmethod
     def _extract_json(content: str) -> str:
