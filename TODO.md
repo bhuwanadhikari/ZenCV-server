@@ -6,3 +6,4 @@ TODOS
 - create deepseek service for cheaper version
 - limit the char for the role.
 - USE LLM TO extract the job description correctly
+- cover letter is too generic, make it interesting based on jd and cv and mystory
