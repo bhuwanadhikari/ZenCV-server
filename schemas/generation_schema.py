@@ -12,6 +12,7 @@ class GenerateCvRequest(BaseModel):
 
 class ProcessCvHtmlRequest(BaseModel):
     raw_html: str = Field(min_length=1)
+    job_url: str = Field(min_length=1)
 
 
 class ProcessedCvHtmlResponse(BaseModel):

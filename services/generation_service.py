@@ -26,9 +26,11 @@ GENERATED_CVS_PATH = Path("data/generated")
 GENERATED_CV_JSON_FILENAME = "generated_cv.json"
 GENERATED_CV_MARKDOWN_FILENAME = "generated_cv.md"
 GENERATED_CL_FILENAME = "generated_cl.txt"
+GENERATED_JD_FILENAME = "generated_jd.txt"
 CV_YAML_SECTION_HEADING = "## CV YAML"
 CV_DATA_ADAPTER = TypeAdapter(CvData)
 CV_DATA_LIST_ADAPTER = TypeAdapter(list[CvData])
+USE_LLM_TO_EXTRACT_JD = True  # Set to True to use LLM for job description extraction
 IGNORED_BODY_TAGS = (
     "script",
     "style",
@@ -285,6 +287,36 @@ def load_cached_cover_letter(job_url: str) -> Optional[str]:
     return cover_letter or None
 
 
+def load_cached_job_description(job_url: str) -> Optional[str]:
+    """Load cached job description from file if it exists."""
+    output_directory = find_generated_cv_directory(job_url)
+    if output_directory is None:
+        return None
+
+    jd_path = output_directory / GENERATED_JD_FILENAME
+    if not jd_path.exists():
+        return None
+
+    try:
+        job_description = jd_path.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        print(f"Failed to read cached job description from {jd_path}: {exc}")
+        return None
+
+    return job_description or None
+
+
+def save_job_description(job_url: str, job_description: str) -> Path:
+    """Save extracted job description to file."""
+    output_directory = find_generated_cv_directory(job_url) or build_generated_cv_directory(job_url)
+    output_directory.mkdir(parents=True, exist_ok=True)
+
+    jd_path = output_directory / GENERATED_JD_FILENAME
+    jd_path.write_text(job_description.strip() + "\n", encoding="utf-8")
+
+    return output_directory
+
+
 def save_generated_cv_artifacts(
     *,
     page_title: str,
@@ -350,7 +382,69 @@ def save_generated_cover_letter_artifacts(
     return output_directory
 
 
-def extract_body_html(raw_html: str) -> str:
+def extract_text_from_body_element(body_element: Any) -> str:
+    """
+    Extract text from body element after step 5 (after flattening inline tags).
+    Returns text separated by line breaks.
+    """
+    def normalize_text(value: str) -> str:
+        return " ".join(value.split())
+
+    def has_child_elements(element: Any) -> bool:
+        for child in element:
+            if isinstance(getattr(child, "tag", None), str):
+                return True
+        return False
+
+    text_lines: list[str] = []
+    for element in body_element.iter():
+        if not isinstance(getattr(element, "tag", None), str):
+            continue
+        if has_child_elements(element):
+            continue
+
+        normalized_element_text = normalize_text(element.text_content() or "")
+        if normalized_element_text:
+            text_lines.append(normalized_element_text)
+
+    if not text_lines:
+        return normalize_text(body_element.text_content() or "")
+
+    return "\n".join(text_lines)
+
+
+def extract_job_description_with_llm(text_content: str) -> str:
+    """
+    Use LLM to extract job description details from plain text.
+    Sends the text with an advanced prompt to extract:
+    - Job description section
+    - Company details
+    - Position
+    - Date
+    - Address
+    - Full/Part-time status
+    - All other relevant job details
+    """
+    from services.prompt_service import build_job_description_extraction_prompt
+
+    llm_service = get_llm_service()
+    messages = build_job_description_extraction_prompt(text_content)
+
+    try:
+        response = llm_service.generate_text(messages)
+        return response
+    except Exception as e:
+        print(f"LLM extraction failed: {e}. Falling back to original text.")
+        return text_content
+
+
+def extract_body_html(raw_html: str, job_url: Optional[str] = None) -> str:
+    # Check if job description is already cached
+    if job_url:
+        cached_jd = load_cached_job_description(job_url)
+        if cached_jd:
+            return cached_jd
+
     # Step 1: Parse the incoming HTML. If parsing fails, return the original
     # payload unchanged so the frontend still gets something usable back.
     try:
@@ -489,6 +583,19 @@ def extract_body_html(raw_html: str) -> str:
 
             inline_element.drop_tag()
 
+    # === BRANCHING POINT AFTER STEP 5 ===
+    # Use LLM-based extraction if enabled and job_url is provided
+    if USE_LLM_TO_EXTRACT_JD and job_url:
+        text_content = extract_text_from_body_element(body_element)
+        extracted_description = extract_job_description_with_llm(text_content)
+        
+        # Save the extracted job description
+        save_job_description(job_url, extracted_description)
+        
+        return extracted_description
+
+    # Otherwise, continue with the original extraction method (Steps 6-9)
+
     # Step 6: Remove known page-specific junk containers that still slip
     # through the broader cleanup rules.
     for translate_tooltip in list(body_element.xpath('.//*[@id="goog-gt-vt"]')):
@@ -555,7 +662,7 @@ def extract_body_html(raw_html: str) -> str:
 def process_cv_html_content(
     request: ProcessCvHtmlRequest,
 ) -> ProcessedCvHtmlResponse:
-    body_html = extract_body_html(request.raw_html)
+    body_html = extract_body_html(request.raw_html, job_url=request.job_url)
     return ProcessedCvHtmlResponse(
         processed_text=body_html,
         processed_html=body_html,
@@ -566,6 +673,10 @@ def generate_cv_content(request: GenerateCvRequest) -> CvData:
     cached_cv = load_cached_generated_cv(request.job_url)
     if cached_cv is not None:
         return cached_cv
+
+    # Check for cached job description first
+    cached_jd = load_cached_job_description(request.job_url)
+    job_description = cached_jd if cached_jd else request.job_description
 
     try:
         cv_variants = get_cv_variants()
@@ -582,7 +693,7 @@ def generate_cv_content(request: GenerateCvRequest) -> CvData:
 
     try:
         messages = build_cv_messages(
-            job_description=request.job_description,
+            job_description=job_description,
             cv_variants=[variant.model_dump(mode="json") for variant in cv_variants],
         )
         llm_response = get_llm_service().generate_json(messages)
@@ -627,6 +738,10 @@ def generate_cover_letter_content(
     if cached_cover_letter is not None:
         return GenerateCoverLetterResponse(cover_letter=cached_cover_letter)
 
+    # Check for cached job description first
+    cached_jd = load_cached_job_description(request.job_url)
+    job_description = cached_jd if cached_jd else request.job_description
+
     try:
         cv_variants = get_cv_variants()
     except FileNotFoundError as exc:
@@ -650,7 +765,7 @@ def generate_cover_letter_content(
         messages = build_cover_letter_messages(
             page_title=request.page_title,
             job_url=request.job_url,
-            job_description=request.job_description,
+            job_description=job_description,
             cv_variants=[variant.model_dump(mode="json") for variant in cv_variants],
             generated_cv=generated_cv,
             story_json=request.story_json_override,

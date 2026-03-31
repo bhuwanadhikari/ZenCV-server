@@ -55,6 +55,18 @@ class LLMService:
             model=response.model or self._model,
         )
 
+    def generate_text(self, messages: list[dict[str, str]]) -> str:
+        """Generate plain text response (not JSON)."""
+        response = self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            temperature=0.3,
+        )
+        content = response.choices[0].message.content
+        if not content:
+            raise ValueError("LLM returned an empty response.")
+        return content.strip()
+
     @staticmethod
     def _extract_json(content: str) -> str:
         cleaned = content.strip()

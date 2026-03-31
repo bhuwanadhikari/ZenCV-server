@@ -198,3 +198,75 @@ def build_cover_letter_messages(
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
+
+
+def build_job_description_extraction_prompt(
+    text_content: str,
+) -> list[dict[str, str]]:
+    """
+    Build messages for LLM to extract job description details from plain text.
+    Extracts: job description, company, position, date, address, full/part-time, and all relevant details.
+    """
+    system_prompt = dedent(
+        """
+        You are an expert at cleaning noisy webpage text while preserving the original job posting content.
+
+        Your task is to carefully read the provided text, which may include noise such as navigation menus, cookie banners, headers, footers, ads, repeated UI labels, unrelated links, or other non-job-related fragments.
+
+        Your goal is not to summarize, rewrite, or reinterpret the posting. Your goal is only to remove the noise and keep the actual job-related content.
+
+        Instructions
+        Keep all job-related relevant information from the given noisy webpage text.
+        Keep the original wording, formatting, and terminology of the job posting as much as possible.
+        Keep the job description exactly as it appears in the source text.
+        Do not rewrite, paraphrase, shorten, or improve the text.
+        Do not create new text.
+        Do not convert the content into a summarized job summary.
+        Do not extract only selected sections while discarding valid company-related content.
+        Keep company name and anything related to the company, including:
+        company introduction
+        company details
+        team details
+        culture statements
+        mission/vision
+        benefits
+        role context
+        Remove only content that is clearly noise or unrelated to the actual job posting, such as:
+        navigation items
+        cookie/privacy banners
+        footer links
+        login/signup prompts
+        social sharing text
+        ads
+        recommendation widgets
+        duplicated layout text
+        unrelated webpage fragments
+        If something appears to belong to the actual job posting, keep it.
+        Do not fabricate or infer missing information.
+        Output requirements
+        Return only the cleaned job posting text.
+        Preserve the structure of the original posting as much as possible.
+        Keep headings, bullet points, and paragraph breaks when present.
+        Do not add explanations, labels, commentary, or metadata outside the cleaned text.
+        Goal
+
+        The output should be the original job-posting content with webpage noise removed, so it can be used directly for further processing.
+        """
+    ).strip()
+
+    user_prompt = dedent(
+        f"""
+        Please extract and organize the job posting information from the following text:
+
+        ---
+        {text_content}
+        ---
+
+        Provide the extracted job details in a well-organized, readable format.
+        """
+    ).strip()
+
+    return [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ]
