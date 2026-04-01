@@ -10,7 +10,7 @@ The service is designed for a browser extension flow:
 
 ## Before You Start
 
-Create `data/user-profile/cv_variants.json` in the same format as [data/user-profile/cv_variants.example.json](/Users/bhuwan/Documents/projects/intellicv/intellicv-server/data/user-profile/cv_variants.example.json).
+Create `data/user-profile/cv_variants.json` in the same format as [data/user-profile/cv_variants.example.json](/Users/bhuwan/Documents/projects/intellicv/intellicv-server/data/user-profile/cv_variants.example.json). You can give your already available CV PDFs to ChatGPT and ask it to generate a cv_variants in the same format as cv_variants.example.json.
 
 This file can contain multiple CV variants for the same candidate. Each variant can have its own:
 
