@@ -1,4 +1,4 @@
-# IntelliCV Server
+# AgileCV Server
 
 FastAPI backend for a browser extension that:
 

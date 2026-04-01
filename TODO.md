@@ -8,3 +8,4 @@ TODOS
 - cover letter is too generic, make it interesting based on jd and cv 
 - for cover letter, tell a custom lifestory 
 - make the llm service usable with any of the llms, currently it is build for only open ai
+- name product `AgileCV` - done

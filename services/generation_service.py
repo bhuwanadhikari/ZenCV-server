@@ -20,8 +20,8 @@ from services.config_service import get_settings
 from services.llm_service import LLMService, LLMUsage
 from services.prompt_service import build_cover_letter_messages, build_cv_messages
 
-CV_VARIANTS_PATH = Path("data/cv-data/cv_variants.json")
-CV_VARIANTS_EXAMPLE_PATH = Path("data/cv-data/cv_variants.example.json")
+CV_VARIANTS_PATH = Path("data/user-profile/cv_variants.json")
+CV_VARIANTS_EXAMPLE_PATH = Path("data/user-profile/cv_variants.example.json")
 GENERATED_CVS_PATH = Path("data/generated")
 GENERATED_CV_JSON_FILENAME = "generated_cv.json"
 GENERATION_SUMMARY_FILENAME = "generation_summary.md"

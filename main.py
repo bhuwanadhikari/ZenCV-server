@@ -5,7 +5,7 @@ from routers.generation import router as generation_router
 
 
 app = FastAPI(
-    title="IntelliCV Server",
+    title="AgileCV Server",
     version="0.1.0",
     description="Backend for browser-extension powered CV and cover letter generation.",
 )
