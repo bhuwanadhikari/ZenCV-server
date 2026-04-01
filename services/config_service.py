@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     llm_output_cost_per_1m_tokens: Optional[float] = Field(
         default=None, alias="LLM_OUTPUT_COST_PER_1M_TOKENS"
     )
-    my_story_json_path: Path = Field(default=Path("data/my_story.json"), alias="MY_STORY_JSON_PATH")
+    MY_STORY_TXT: Path = Field(default=Path("data/user-profile/my_story.txt"), alias="MY_STORY_TXT")
 
     model_config = SettingsConfigDict(
         env_file=".env",

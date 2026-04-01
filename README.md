@@ -1,57 +1,45 @@
 # AgileCV Server
 
-FastAPI backend for a browser extension that:
+FastAPI backend for generating a tailored CV JSON and cover letter from a job posting.
 
-- scans the current browser tab for a job description,
-- generates a tailored CV JSON from the user's story JSON,
-- generates a cover letter from the tailored CV, the story JSON, and the job description.
+The service is designed for a browser extension flow:
 
-## Why FastAPI
+- extract the job-description text from the current page HTML,
+- generate a targeted CV JSON from stored CV variants,
+- generate a cover letter using the job description and CV context.
 
-FastAPI is a strong choice here because it gives you:
+## Before You Start
 
-- quick API development with request and response validation,
-- easy JSON-first endpoints for extension traffic,
-- automatic OpenAPI docs for testing,
-- good async support if you later add queues, auth, or persistence.
+Create `data/user-profile/cv_variants.json` in the same format as [data/user-profile/cv_variants.example.json](/Users/bhuwan/Documents/projects/intellicv/intellicv-server/data/user-profile/cv_variants.example.json).
 
-For this use case, it is a very practical choice.
+This file can contain multiple CV variants for the same candidate. Each variant can have its own:
 
-## Endpoints
+- profile summary,
+- skill groups,
+- section titles,
+- work experience entries and bullet points,
+- job titles,
+- employers,
+- education entries,
+- projects or other supporting sections.
+
+The service uses those variants as the factual source of truth. Based on the target job description, the LLM selects and rewrites the best-matching bullet points, job titles, skills, and supporting evidence, then returns a tailored CV JSON to the frontend.
+
+Also update `.env` with your real `LLM_API_KEY` before starting the server.
+
+## API
 
 - `GET /health`
-- `POST /api/cv/generate`
 - `POST /api/job-description/process`
+- `POST /api/cv/generate`
 - `POST /api/cover-letter/generate`
 
-### CV generate request body
+Interactive docs are available at:
 
-```json
-{
-  "page_title": "Senior Backend Engineer at Example",
-  "job_url": "https://example.com/jobs/backend-engineer",
-  "job_description": "Full scanned job description text from the page...",
-  "story_json_override": null
-}
-```
+- `http://localhost:8000/docs`
+- `http://localhost:8000/redoc`
 
-Each `POST /api/cv/generate` call now also writes artifacts to `data/generated/<page_title>/`:
-
-- `generated_cv.json` with the raw generated CV JSON
-- `generation_summary.md` with appended JD, CV, and cover letter generations plus request token usage and estimated cost for each LLM task
-
-### Job description process request body
-
-```json
-{
-  "raw_html": "<html><body><header>...</header><main>Job description...</main><footer>...</footer></body></html>"
-}
-```
-
-`POST /api/job-description/process` currently cleans the incoming HTML, finds the common parent of the top 5 longest leaf-text elements, and returns newline-separated plain text from that region in both `processed_html` and `processed_text`.
-When LLM-based JD extraction is enabled, it also persists the extracted job description and appends it to `generation_summary.md` with request metrics.
-
-## Setup
+## Local Setup
 
 ```bash
 python -m venv .venv
@@ -61,19 +49,56 @@ cp .env.example .env
 uvicorn main:app --reload
 ```
 
-## Environment variables
+The server starts on `http://127.0.0.1:8000` by default.
+
+## Environment Variables
+
+Configured in [.env.example](/Users/bhuwan/Documents/projects/intellicv/intellicv-server/.env.example):
 
 - `LLM_API_KEY`
-- `LLM_MODEL`
-- `LLM_BASE_URL`
-- `LLM_TIMEOUT_SECONDS`
-- `LLM_INPUT_COST_PER_1M_TOKENS` (optional)
-- `LLM_OUTPUT_COST_PER_1M_TOKENS` (optional)
-- `MY_STORY_JSON_PATH`
+- `LLM_MODEL` default: `gpt-4.1-mini`
+- `LLM_BASE_URL` default: `https://api.openai.com/v1`
+- `LLM_TIMEOUT_SECONDS` default: `60`
+- `MY_STORY_TXT` default: `data/user-profile/my_story.txt`
 
-## Notes
+Also supported:
 
-- `LLM_BASE_URL` can point to OpenAI or another OpenAI-compatible provider such as DeepSeek.
-- If you use a model or provider without built-in pricing in the app, set `LLM_INPUT_COST_PER_1M_TOKENS` and `LLM_OUTPUT_COST_PER_1M_TOKENS` so the markdown artifact can show an estimated request cost.
-- The server currently allows all origins and skips authentication, matching your current development goal.
-- Replace `data/my_story.json` with your real story JSON structure and content.
+- `LLM_INPUT_COST_PER_1M_TOKENS` optional
+- `LLM_OUTPUT_COST_PER_1M_TOKENS` optional
+
+Notes:
+
+- `LLM_BASE_URL` can point to OpenAI or another OpenAI-compatible provider.
+- If your provider/model pricing is not built into the app, set the optional token-cost variables so request cost estimates can be written to the summary artifact.
+- `MY_STORY_TXT` exists in settings today, but the current generation flow uses `story_json_override` from the request body rather than reading that file directly.
+
+## Data Files
+
+The service reads CV source data from:
+
+- [data/user-profile/cv_variants.json](/Users/bhuwan/Documents/projects/intellicv/intellicv-server/data/user-profile/cv_variants.json) when present
+- otherwise [data/user-profile/cv_variants.example.json](/Users/bhuwan/Documents/projects/intellicv/intellicv-server/data/user-profile/cv_variants.example.json)
+
+Generated artifacts are stored under:
+
+- `data/generated/<job_url_hash>/`
+
+Artifacts may include:
+
+- `generated_jd.txt`
+- `generated_cv.json`
+- `generated_cl.txt`
+- `generation_summary.md`
+
+`generation_summary.md` appends the generated content plus request token usage and estimated cost for each LLM call.
+
+## Implementation Notes
+
+- CORS is currently open to all origins.
+- There is no authentication layer yet.
+- Caching is keyed by a hash of `job_url`, not by page title.
+- The service currently uses the OpenAI chat-completions API via the official Python client.
+
+
+
+
