@@ -26,12 +26,22 @@ class CvContactItem(BaseModel):
     href: Optional[str] = None
 
 
+class CvOrganization(BaseModel):
+    name: str
+    url: str
+    address: str
+
+
+class CvResource(BaseModel):
+    placeholder: str
+    url: str
+
+
 class CvEntry(BaseModel):
     dateRange: Optional[str] = None
     title: Optional[str] = None
-    organization: Optional[str] = None
-    link: Optional[str] = None
-    location: Optional[str] = None
+    organization: Optional[CvOrganization] = None
+    resource: Optional[CvResource] = None
     bullets: List[str]
     stack: Optional[List[str]] = None
 

@@ -49,9 +49,11 @@
           {
             "dateRange": "Jan 2023 - Present",
             "title": "Software Engineer",
-            "organization": "Example Tech",
-            "link": "https://example.com/",
-            "location": "Berlin, Germany",
+            "organization": {
+              "name": "Example Tech",
+              "url": "https://example.com/",
+              "address": "Berlin, Germany"
+            },
             "stack": ["React.js", "TypeScript", "FastAPI", "PostgreSQL"],
             "bullets": [
               "Built customer-facing product features for a SaaS platform used by distributed teams.",
@@ -67,9 +69,11 @@
           {
             "dateRange": "Oct 2019 - Jul 2022",
             "title": "BSc in Computer Science",
-            "organization": "Example University",
-            "link": "https://example.edu/",
-            "location": "Munich, Germany",
+            "organization": {
+              "name": "Example University",
+              "url": "https://example.edu/",
+              "address": "Munich, Germany"
+            },
             "bullets": [
               "Focused on software engineering, distributed systems, and data-intensive applications.",
               "Completed team-based projects covering backend services, frontend applications, and testing workflows."
@@ -82,14 +86,41 @@
         "entries": [
           {
             "title": "Cyber Intelligence Platform",
-            "link": "https://example.com/",
             "stack": ["React.js", "TypeScript", "Golang", "REST APIs"],
             "bullets": [
               "Reworked and modernized an existing web application by improving UI components, state management, and overall performance",
               "Implemented new product features and integrated backend APIs with clean error handling, caching, and structured data flows",
               "Improved code quality and maintainability through refactoring, testing, documentation, and reduction of technical debt",
               "Supported full-stack development with backend services, API integrations, monitoring, debugging, and CI/CD release workflows"
-            ]
+            ],
+            "resource": {
+              "placeholder": "View Project",
+              "url": "https://colab.research.google.com/drive/10CVYQ6QdVWqfr9apQ6tpp22rWBiL9Njz?usp=sharing"
+            }
+          }
+        ]
+      },
+      {
+        "title": "Publications",
+        "entries": [
+          {
+            "title": "Suffix-Aware vs. Suffix-Unaware Autoregressive Code Generation",
+            "stack": [
+              "Code Generation",
+              "Fill-in-the-Middle",
+              "Autoregressive Models",
+              "HumanEval"
+            ],
+            "bullets": [
+              "Conducted an empirical comparison of suffix-aware and suffix-unaware code generation under prompt-based evaluation settings",
+              "Analyzed whether access to suffix context improves completion quality beyond gains explained by larger prompt context alone",
+              "Designed evaluation around syntactic correctness, unit test success, and boundary-related failure patterns in generated code",
+              "Used benchmark-style code tasks to study model behavior in left-to-right and infilling-oriented generation scenarios"
+            ],
+            "resource": {
+              "placeholder": "View Article",
+              "url": "https://colab.research.google.com/drive/10CVYQ6QdVWqfr9apQ6tpp22rWBiL9Njz?usp=sharing"
+            }
           }
         ]
       }
@@ -145,9 +176,11 @@
           {
             "dateRange": "Jan 2023 - Present",
             "title": "Software Engineer",
-            "organization": "Example Tech",
-            "link": "https://example.com/",
-            "location": "Berlin, Germany",
+            "organization": {
+              "name": "Example Tech",
+              "url": "https://example.com/",
+              "address": "Berlin, Germany"
+            },
             "stack": ["React.js", "TypeScript", "FastAPI", "PostgreSQL"],
             "bullets": [
               "Built customer-facing product features for a SaaS platform used by distributed teams.",
@@ -157,16 +190,17 @@
           }
         ]
       },
-
       {
         "title": "Education",
         "entries": [
           {
             "dateRange": "Oct 2019 - Jul 2022",
             "title": "BSc in Computer Science",
-            "organization": "Example University",
-            "link": "https://example.edu/",
-            "location": "Munich, Germany",
+            "organization": {
+              "name": "Example University",
+              "url": "https://example.edu/",
+              "address": "Munich, Germany"
+            },
             "bullets": [
               "Focused on software engineering, distributed systems, and data-intensive applications.",
               "Completed team-based projects covering backend services, frontend applications, and testing workflows."
@@ -179,14 +213,41 @@
         "entries": [
           {
             "title": "Cyber Intelligence Platform",
-            "link": "https://example.com/",
             "stack": ["React.js", "TypeScript", "Golang", "REST APIs"],
             "bullets": [
               "Reworked and modernized an existing web application by improving UI components, state management, and overall performance",
               "Implemented new product features and integrated backend APIs with clean error handling, caching, and structured data flows",
               "Improved code quality and maintainability through refactoring, testing, documentation, and reduction of technical debt",
               "Supported full-stack development with backend services, API integrations, monitoring, debugging, and CI/CD release workflows"
-            ]
+            ],
+            "resource": {
+              "placeholder": "View Project",
+              "url": "https://example.com/"
+            }
+          }
+        ]
+      },
+      {
+        "title": "Publications",
+        "entries": [
+          {
+            "title": "Suffix-Aware vs. Suffix-Unaware Autoregressive Code Generation",
+            "stack": [
+              "Code Generation",
+              "Fill-in-the-Middle",
+              "Autoregressive Models",
+              "HumanEval"
+            ],
+            "bullets": [
+              "Conducted an empirical comparison of suffix-aware and suffix-unaware code generation under prompt-based evaluation settings",
+              "Analyzed whether access to suffix context improves completion quality beyond gains explained by larger prompt context alone",
+              "Designed evaluation around syntactic correctness, unit test success, and boundary-related failure patterns in generated code",
+              "Used benchmark-style code tasks to study model behavior in left-to-right and infilling-oriented generation scenarios"
+            ],
+            "resource": {
+              "placeholder": "View Article",
+              "url": "https://example.com/"
+            }
           }
         ]
       }

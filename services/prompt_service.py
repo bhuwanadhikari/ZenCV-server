@@ -25,7 +25,7 @@ def build_cv_messages(
 
         Goals:
         1. Maximize relevance to the target role and ATS keyword alignment.
-        2. Preserve factual integrity. Do not invent employers, degrees, dates, locations, links, technologies, or achievements.
+        2. Preserve factual integrity. Do not invent employers, degrees, dates, organization addresses, resource URLs, technologies, or achievements.
         3. Read across all variants and use them as the candidate evidence pool.
         4. Create one new CV variant that keeps the same JSON structure as the source variants.
         5. Make the new variant dynamic for the target job description while remaining fully defensible from the provided variants.
@@ -42,11 +42,11 @@ def build_cv_messages(
         - For the most recent professional experience entry, prefer 4 to 5 bullets when the source variants provide enough strong evidence.
         - Each bullet must be concise, action-oriented, specific, and keyword-rich without sounding robotic.
         - If a source entry has fewer than the target number of bullets, derive the missing bullets by re-expressing supported facts from other variants for the same underlying experience. Do not fabricate unsupported claims or metrics.
-        - Keep links valid and unchanged from the source data when the same organization or profile is referenced.
-        - Keep dates and locations exactly aligned with the source data for the chosen entry when those fields exist in the source variants.
+        - Keep organization URLs, organization addresses, and resource URLs valid and unchanged from the source data when the same item is referenced.
+        - Keep dates and organization addresses exactly aligned with the source data for the chosen entry when those fields exist in the source variants.
         - Prefer strong, job-relevant experiences and education items.
         - Keep the Education section to no more than 2 entries.
-        - If there are projects, publications, or other sections, prioritize the most recent and apply the section only if it is relevant to the target job; keep max 3 bullet points only which can be tweaked based on the job description.
+        - If there are projects, publications, or other sections, prioritize the most recent and apply the section even if it is slightly relevant to the target; keep max 3 bullet points only which is to be tweaked based on the job description.
         - Skill groups should remain relevant to the job description and use only skills present in the source variants.
 
         Output contract:
@@ -82,8 +82,15 @@ def build_cv_messages(
                   {
                     "dateRange": "string",
                     "title": "string",
-                    "link": "string",
-                    "location": "string",
+                    "organization": {
+                      "name": "string",
+                      "url": "string",
+                      "address": "string"
+                    },
+                    "resource": {
+                      "placeholder": "string",
+                      "url": "string"
+                    },
                     "bullets": ["string", "string", "string", "string"],
                     "stack": ["string"]
                   }
@@ -92,7 +99,9 @@ def build_cv_messages(
             ]
           }
         - `bullets` may contain more than 4 items only when that entry is the most recent professional experience and the additional bullets are strongly supported by the source variants.
-        - Within each section entry, `dateRange`, `title`, `organization`, `link`, `location`, and `stack` are optional and may be omitted when the source variants do not provide them.
+        - Within each section entry, `dateRange`, `title`, `organization`, `resource`, and `stack` are optional and may be omitted when the source variants do not provide them.
+        - For professional experience and education entries, use `organization` with `name`, `url`, and `address` when source data exists.
+        - For project and publication entries, use `resource` with `placeholder` and `url` when source data exists.
         """
     ).strip()
 
