@@ -27,11 +27,11 @@ class CvContactItem(BaseModel):
 
 
 class CvEntry(BaseModel):
-    dateRange: str
-    title: str
-    organization: str
-    link: str
-    location: str
+    dateRange: Optional[str] = None
+    title: Optional[str] = None
+    organization: Optional[str] = None
+    link: Optional[str] = None
+    location: Optional[str] = None
     bullets: List[str]
     stack: Optional[List[str]] = None
 

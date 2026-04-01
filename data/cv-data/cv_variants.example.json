@@ -35,21 +35,11 @@
     "skillGroups": [
       {
         "label": "Frontend",
-        "items": [
-          "React.js",
-          "TypeScript",
-          "Next.js",
-          "Jest"
-        ]
+        "items": ["React.js", "TypeScript", "Next.js", "Jest"]
       },
       {
         "label": "Backend",
-        "items": [
-          "Python",
-          "FastAPI",
-          "PostgreSQL",
-          "Docker"
-        ]
+        "items": ["Python", "FastAPI", "PostgreSQL", "Docker"]
       }
     ],
     "sections": [
@@ -62,12 +52,7 @@
             "organization": "Example Tech",
             "link": "https://example.com/",
             "location": "Berlin, Germany",
-            "stack": [
-              "React.js",
-              "TypeScript",
-              "FastAPI",
-              "PostgreSQL"
-            ],
+            "stack": ["React.js", "TypeScript", "FastAPI", "PostgreSQL"],
             "bullets": [
               "Built customer-facing product features for a SaaS platform used by distributed teams.",
               "Collaborated with designers and backend engineers to deliver responsive, accessible interfaces.",
@@ -88,6 +73,22 @@
             "bullets": [
               "Focused on software engineering, distributed systems, and data-intensive applications.",
               "Completed team-based projects covering backend services, frontend applications, and testing workflows."
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Projects",
+        "entries": [
+          {
+            "title": "Cyber Intelligence Platform",
+            "link": "https://example.com/",
+            "stack": ["React.js", "TypeScript", "Golang", "REST APIs"],
+            "bullets": [
+              "Reworked and modernized an existing web application by improving UI components, state management, and overall performance",
+              "Implemented new product features and integrated backend APIs with clean error handling, caching, and structured data flows",
+              "Improved code quality and maintainability through refactoring, testing, documentation, and reduction of technical debt",
+              "Supported full-stack development with backend services, API integrations, monitoring, debugging, and CI/CD release workflows"
             ]
           }
         ]
@@ -130,21 +131,11 @@
     "skillGroups": [
       {
         "label": "Frontend",
-        "items": [
-          "React.js",
-          "TypeScript",
-          "Next.js",
-          "Jest"
-        ]
+        "items": ["React.js", "TypeScript", "Next.js", "Jest"]
       },
       {
         "label": "Backend",
-        "items": [
-          "Python",
-          "FastAPI",
-          "PostgreSQL",
-          "Docker"
-        ]
+        "items": ["Python", "FastAPI", "PostgreSQL", "Docker"]
       }
     ],
     "sections": [
@@ -157,12 +148,7 @@
             "organization": "Example Tech",
             "link": "https://example.com/",
             "location": "Berlin, Germany",
-            "stack": [
-              "React.js",
-              "TypeScript",
-              "FastAPI",
-              "PostgreSQL"
-            ],
+            "stack": ["React.js", "TypeScript", "FastAPI", "PostgreSQL"],
             "bullets": [
               "Built customer-facing product features for a SaaS platform used by distributed teams.",
               "Collaborated with designers and backend engineers to deliver responsive, accessible interfaces.",
@@ -171,6 +157,7 @@
           }
         ]
       },
+
       {
         "title": "Education",
         "entries": [
@@ -183,6 +170,22 @@
             "bullets": [
               "Focused on software engineering, distributed systems, and data-intensive applications.",
               "Completed team-based projects covering backend services, frontend applications, and testing workflows."
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Projects",
+        "entries": [
+          {
+            "title": "Cyber Intelligence Platform",
+            "link": "https://example.com/",
+            "stack": ["React.js", "TypeScript", "Golang", "REST APIs"],
+            "bullets": [
+              "Reworked and modernized an existing web application by improving UI components, state management, and overall performance",
+              "Implemented new product features and integrated backend APIs with clean error handling, caching, and structured data flows",
+              "Improved code quality and maintainability through refactoring, testing, documentation, and reduction of technical debt",
+              "Supported full-stack development with backend services, API integrations, monitoring, debugging, and CI/CD release workflows"
             ]
           }
         ]

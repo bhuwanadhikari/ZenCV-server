@@ -43,9 +43,10 @@ def build_cv_messages(
         - Each bullet must be concise, action-oriented, specific, and keyword-rich without sounding robotic.
         - If a source entry has fewer than the target number of bullets, derive the missing bullets by re-expressing supported facts from other variants for the same underlying experience. Do not fabricate unsupported claims or metrics.
         - Keep links valid and unchanged from the source data when the same organization or profile is referenced.
-        - Keep dates and locations exactly aligned with the source data for the chosen entry.
+        - Keep dates and locations exactly aligned with the source data for the chosen entry when those fields exist in the source variants.
         - Prefer strong, job-relevant experiences and education items.
         - Keep the Education section to no more than 2 entries.
+        - If there are projects, publications, or other sections, prioritize the most recent and apply the section only if it is relevant to the target job; keep max 3 bullet points only which can be tweaked based on the job description.
         - Skill groups should remain relevant to the job description and use only skills present in the source variants.
 
         Output contract:
@@ -81,7 +82,6 @@ def build_cv_messages(
                   {
                     "dateRange": "string",
                     "title": "string",
-                    "organization": "string",
                     "link": "string",
                     "location": "string",
                     "bullets": ["string", "string", "string", "string"],
@@ -92,7 +92,7 @@ def build_cv_messages(
             ]
           }
         - `bullets` may contain more than 4 items only when that entry is the most recent professional experience and the additional bullets are strongly supported by the source variants.
-        - Omit `stack` only when the selected entry does not support it in the source variants.
+        - Within each section entry, `dateRange`, `title`, `organization`, `link`, `location`, and `stack` are optional and may be omitted when the source variants do not provide them.
         """
     ).strip()
 
