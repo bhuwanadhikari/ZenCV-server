@@ -99,6 +99,9 @@ Artifacts may include:
 - Caching is keyed by a hash of `job_url`, not by page title.
 - The service currently uses the OpenAI chat-completions API via the official Python client.
 
+## Roadmap
+
+Current follow-up work is tracked in [TODO.md](/Users/bhuwan/Documents/projects/intellicv/intellicv-server/TODO.md).
 
 
 
