@@ -12,7 +12,7 @@ The service is designed for a browser extension flow:
 
 ## Before You Start
 
-Create `data/user-profile/cv_variants.json` in the same format as [data/user-profile/cv_variants.example.json](/Users/bhuwan/Documents/projects/intellicv/intellicv-server/data/user-profile/cv_variants.example.json). You can give your already available CV PDFs to ChatGPT and ask it to generate a cv_variants in the same format as cv_variants.example.json.
+Create `data/user-profile/cv_variants.json` in the same format as [data/user-profile/cv_variants.example.json](data/user-profile/cv_variants.example.json). You can give your already available CV PDFs to ChatGPT and ask it to generate a cv_variants in the same format as cv_variants.example.json.
 
 This file can contain multiple CV variants for the same candidate. Each variant can have its own:
 
@@ -55,7 +55,7 @@ The server starts on `http://127.0.0.1:8000` by default.
 
 ## Environment Variables
 
-Configured in [.env.example](/Users/bhuwan/Documents/projects/intellicv/intellicv-server/.env.example):
+Configured in [.env.example](.env.example):
 
 - `LLM_API_KEY`
 - `LLM_MODEL` default: `gpt-4.1-mini`
@@ -78,8 +78,8 @@ Notes:
 
 The service reads CV source data from:
 
-- [data/user-profile/cv_variants.json](/Users/bhuwan/Documents/projects/intellicv/intellicv-server/data/user-profile/cv_variants.json) when present
-- otherwise [data/user-profile/cv_variants.example.json](/Users/bhuwan/Documents/projects/intellicv/intellicv-server/data/user-profile/cv_variants.example.json)
+- [data/user-profile/cv_variants.json](data/user-profile/cv_variants.json) when present
+- otherwise [data/user-profile/cv_variants.example.json](data/user-profile/cv_variants.example.json)
 
 Generated artifacts are stored under:
 
