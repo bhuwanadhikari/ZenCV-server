@@ -105,4 +105,9 @@ Artifacts may include:
 
 Current follow-up work is tracked in [TODO.md](https://github.com/bhuwanadhikari/ZenCV-server/blob/main/TODO.md).
 
+## Preview Images
+
+![ZenCV preview 1](data/preview-images/Screenshot%202026-04-02%20at%2016.36.16.png)
+![ZenCV preview 2](data/preview-images/Screenshot%202026-04-02%20at%2016.36.54.png)
+![ZenCV preview 3](data/preview-images/Screenshot%202026-04-02%20at%2016.37.15.png)
 
