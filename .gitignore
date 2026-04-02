@@ -35,6 +35,7 @@ dist/
 # Local CV data
 data/cv-data/*.json
 !data/cv-data/*.example.json
+data/user-profile/cv_variants.json
 
 # Generated output
 data/generated/
