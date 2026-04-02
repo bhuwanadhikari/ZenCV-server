@@ -1,6 +1,8 @@
 # ZenCV Server
 
-FastAPI backend for generating a tailored CV JSON and cover letter from a job posting.
+FastAPI backend for a browser extension to generate dynamic CV and cover letter from a job posting. 
+
+Browser Extension frontend repo: https://github.com/bhuwanadhikari/ZenCV-client
 
 The service is designed for a browser extension flow:
 
@@ -101,6 +103,6 @@ Artifacts may include:
 
 ## Roadmap
 
-Current follow-up work is tracked in [TODO.md](/Users/bhuwan/Documents/projects/intellicv/intellicv-server/TODO.md).
+Current follow-up work is tracked in [TODO.md](https://github.com/bhuwanadhikari/ZenCV-server/blob/main/TODO.md).
 
 
