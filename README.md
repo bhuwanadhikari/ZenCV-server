@@ -1,4 +1,4 @@
-# AgileCV Server
+# ZenCV Server
 
 FastAPI backend for generating a tailored CV JSON and cover letter from a job posting.
 
@@ -102,6 +102,5 @@ Artifacts may include:
 ## Roadmap
 
 Current follow-up work is tracked in [TODO.md](/Users/bhuwan/Documents/projects/intellicv/intellicv-server/TODO.md).
-
 
 
