@@ -29,7 +29,7 @@ GENERATED_CL_FILENAME = "generated_cl.txt"
 GENERATED_JD_FILENAME = "generated_jd.txt"
 CV_DATA_ADAPTER = TypeAdapter(CvData)
 CV_DATA_LIST_ADAPTER = TypeAdapter(list[CvData])
-USE_LLM_TO_EXTRACT_JD = True  # Set to True to use LLM for job description extraction
+USE_LLM_TO_EXTRACT_JD = True  # Set to True to use LLM for job description extraction, setting to false will not work
 IGNORED_BODY_TAGS = (
     "script",
     "style",
@@ -456,154 +456,155 @@ def extract_job_description_with_llm(text_content: str) -> tuple[str, str, Optio
 
 
 def extract_body_html(raw_html: str, job_url: Optional[str] = None) -> str:
+    print("Extracting body HTML content...", raw_html)
     # Check if job description is already cached
     if job_url:
         cached_jd = load_cached_job_description(job_url)
         if cached_jd:
             return cached_jd
 
-    # Step 1: Parse the incoming HTML. If parsing fails, return the original
-    # payload unchanged so the frontend still gets something usable back.
-    try:
-        parsed_html = lxml_html.fromstring(raw_html)
-    except (lxml_html.ParserError, ValueError):
-        return raw_html
+    # # Step 1: Parse the incoming HTML. If parsing fails, return the original
+    # # payload unchanged so the frontend still gets something usable back.
+    # try:
+    #     parsed_html = lxml_html.fromstring(raw_html)
+    # except (lxml_html.ParserError, ValueError):
+    #     return raw_html
 
     # Step 2: Find the first body element. If there is no body tag, fall back
     # to the original HTML instead of trying to invent a wrapper.
-    body_elements = parsed_html.xpath("//body")
-    if not body_elements:
-        return raw_html
+    # body_elements = parsed_html.xpath("//body")
+    # if not body_elements:
+    #     return raw_html
 
-    body_element = body_elements[0]
+    # body_element = body_elements[0]
 
-    def normalize_text(value: str) -> str:
-        return " ".join(value.split())
+    # def normalize_text(value: str) -> str:
+    #     return " ".join(value.split())
 
-    def remove_element_preserving_tail(element: Any) -> None:
-        parent = element.getparent()
-        if parent is None:
-            return
+    # def remove_element_preserving_tail(element: Any) -> None:
+    #     parent = element.getparent()
+    #     if parent is None:
+    #         return
 
-        # When we remove an ignored subtree, keep any trailing text that came
-        # after the element so nearby content is not accidentally dropped.
-        tail_text = element.tail or ""
-        previous_sibling = element.getprevious()
-        if tail_text:
-            if previous_sibling is not None:
-                previous_sibling.tail = (previous_sibling.tail or "") + tail_text
-            else:
-                parent.text = (parent.text or "") + tail_text
+    #     # When we remove an ignored subtree, keep any trailing text that came
+    #     # after the element so nearby content is not accidentally dropped.
+    #     tail_text = element.tail or ""
+    #     previous_sibling = element.getprevious()
+    #     if tail_text:
+    #         if previous_sibling is not None:
+    #             previous_sibling.tail = (previous_sibling.tail or "") + tail_text
+    #         else:
+    #             parent.text = (parent.text or "") + tail_text
 
-        parent.remove(element)
+    #     parent.remove(element)
 
-    def has_child_elements(element: Any) -> bool:
-        for child in element:
-            if isinstance(getattr(child, "tag", None), str):
-                return True
-        return False
+    # def has_child_elements(element: Any) -> bool:
+    #     for child in element:
+    #         if isinstance(getattr(child, "tag", None), str):
+    #             return True
+    #     return False
 
-    def find_lowest_common_ancestor(elements: list[Any]) -> Any:
-        if not elements:
-            return None
+    # def find_lowest_common_ancestor(elements: list[Any]) -> Any:
+    #     if not elements:
+    #         return None
 
-        first_ancestor_chain: list[Any] = []
-        current = elements[0]
-        while current is not None and isinstance(getattr(current, "tag", None), str):
-            first_ancestor_chain.append(current)
-            current = current.getparent()
+    #     first_ancestor_chain: list[Any] = []
+    #     current = elements[0]
+    #     while current is not None and isinstance(getattr(current, "tag", None), str):
+    #         first_ancestor_chain.append(current)
+    #         current = current.getparent()
 
-        other_ancestor_ids: list[set[int]] = []
-        for element in elements[1:]:
-            ancestor_ids: set[int] = set()
-            current = element
-            while current is not None and isinstance(getattr(current, "tag", None), str):
-                ancestor_ids.add(id(current))
-                current = current.getparent()
-            other_ancestor_ids.append(ancestor_ids)
+    #     other_ancestor_ids: list[set[int]] = []
+    #     for element in elements[1:]:
+    #         ancestor_ids: set[int] = set()
+    #         current = element
+    #         while current is not None and isinstance(getattr(current, "tag", None), str):
+    #             ancestor_ids.add(id(current))
+    #             current = current.getparent()
+    #         other_ancestor_ids.append(ancestor_ids)
 
-        for ancestor in first_ancestor_chain:
-            if all(id(ancestor) in ancestor_ids for ancestor_ids in other_ancestor_ids):
-                return ancestor
+    #     for ancestor in first_ancestor_chain:
+    #         if all(id(ancestor) in ancestor_ids for ancestor_ids in other_ancestor_ids):
+    #             return ancestor
 
-        return elements[0]
+    #     return elements[0]
 
-    def find_grandparent(element: Any) -> Any:
-        current = element
-        # TODO: check the depth here
-        for _ in range(4):
-            parent = current.getparent()
-            if parent is None or not isinstance(getattr(parent, "tag", None), str):
-                return current
-            current = parent
-        return current
+    # def find_grandparent(element: Any) -> Any:
+    #     current = element
+    #     # TODO: check the depth here
+    #     for _ in range(4):
+    #         parent = current.getparent()
+    #         if parent is None or not isinstance(getattr(parent, "tag", None), str):
+    #             return current
+    #         current = parent
+    #     return current
 
     # Step 3: Remove all non-content tags one tag-name at a time. This is more
     # explicit than a single combined XPath and easier to debug or tweak later.
     # Each removal drops the whole subtree for that ignored tag, including all
     # of its children.
-    for tag_name in IGNORED_BODY_TAGS:
-        matching_elements = list(body_element.xpath(f".//{tag_name}"))
-        for removable_element in matching_elements:
-            remove_element_preserving_tail(removable_element)
+    # for tag_name in IGNORED_BODY_TAGS:
+    #     matching_elements = list(body_element.xpath(f".//{tag_name}"))
+    #     for removable_element in matching_elements:
+    #         remove_element_preserving_tail(removable_element)
 
     # Step 4: Remove interactive wrappers when they contain child elements.
     # Keep plain text links or button-like containers, but drop wrappers such
     # as <a><p>...</p></a> or <div role="button"><span>...</span></div>.
-    for element in list(body_element.iter()):
-        if not isinstance(getattr(element, "tag", None), str):
-            continue
+    # for element in list(body_element.iter()):
+    #     if not isinstance(getattr(element, "tag", None), str):
+    #         continue
 
-        tag_name = element.tag.lower()
-        role_tokens = (element.get("role") or "").strip().lower().split()
-        is_anchor_tag = tag_name == "a"
-        has_interactive_role = any(
-            role_token in IGNORED_INTERACTIVE_ROLES for role_token in role_tokens
-        )
-        if (is_anchor_tag or has_interactive_role) and has_child_elements(element):
-            remove_element_preserving_tail(element)
+    #     tag_name = element.tag.lower()
+    #     role_tokens = (element.get("role") or "").strip().lower().split()
+    #     is_anchor_tag = tag_name == "a"
+    #     has_interactive_role = any(
+    #         role_token in IGNORED_INTERACTIVE_ROLES for role_token in role_tokens
+    #     )
+    #     if (is_anchor_tag or has_interactive_role) and has_child_elements(element):
+    #         remove_element_preserving_tail(element)
 
     # Step 5: Flatten inline formatting tags one tag-name at a time so their
     # text stays in the document but the formatting tag itself disappears.
-    for tag_name in INLINE_FLATTEN_TAGS:
-        matching_elements = list(body_element.xpath(f".//{tag_name}"))
+    # for tag_name in INLINE_FLATTEN_TAGS:
+    #     matching_elements = list(body_element.xpath(f".//{tag_name}"))
 
-        # Process from the deepest match back upward so nested inline tags are
-        # unwrapped safely without invalidating later operations.
-        for inline_element in reversed(matching_elements):
-            if inline_element.tag == "br":
-                parent = inline_element.getparent()
-                if parent is None:
-                    continue
+    #     # Process from the deepest match back upward so nested inline tags are
+    #     # unwrapped safely without invalidating later operations.
+    #     for inline_element in reversed(matching_elements):
+    #         if inline_element.tag == "br":
+    #             parent = inline_element.getparent()
+    #             if parent is None:
+    #                 continue
 
-                # Treat line breaks as plain spacing in the flattened output so
-                # adjacent words do not collapse together.
-                replacement_text = inline_element.tail or ""
-                if replacement_text and not replacement_text.startswith(
-                    (" ", "\n", "\t")
-                ):
-                    replacement_text = " " + replacement_text
-                elif not replacement_text:
-                    replacement_text = " "
+    #             # Treat line breaks as plain spacing in the flattened output so
+    #             # adjacent words do not collapse together.
+    #             replacement_text = inline_element.tail or ""
+    #             if replacement_text and not replacement_text.startswith(
+    #                 (" ", "\n", "\t")
+    #             ):
+    #                 replacement_text = " " + replacement_text
+    #             elif not replacement_text:
+    #                 replacement_text = " "
 
-                previous_sibling = inline_element.getprevious()
-                if previous_sibling is not None:
-                    previous_sibling.tail = (
-                        previous_sibling.tail or ""
-                    ) + replacement_text
-                else:
-                    parent.text = (parent.text or "") + replacement_text
+    #             previous_sibling = inline_element.getprevious()
+    #             if previous_sibling is not None:
+    #                 previous_sibling.tail = (
+    #                     previous_sibling.tail or ""
+    #                 ) + replacement_text
+    #             else:
+    #                 parent.text = (parent.text or "") + replacement_text
 
-                inline_element.tail = None
-                remove_element_preserving_tail(inline_element)
-                continue
+    #             inline_element.tail = None
+    #             remove_element_preserving_tail(inline_element)
+    #             continue
 
-            inline_element.drop_tag()
+    #         inline_element.drop_tag()
 
     # === BRANCHING POINT AFTER STEP 5 ===
     # Use LLM-based extraction if enabled and job_url is provided
     if USE_LLM_TO_EXTRACT_JD and job_url:
-        text_content = extract_text_from_body_element(body_element)
+        text_content = raw_html
         (
             extracted_description,
             llm_model,
@@ -627,65 +628,65 @@ def extract_body_html(raw_html: str, job_url: Optional[str] = None) -> str:
 
     # Step 6: Remove known page-specific junk containers that still slip
     # through the broader cleanup rules.
-    for translate_tooltip in list(body_element.xpath('.//*[@id="goog-gt-vt"]')):
-        remove_element_preserving_tail(translate_tooltip)
-    for cv_match in list(
-        body_element.xpath(
-            './/div['
-            'starts-with(normalize-space(@id), "cv-match")'
-            ']'
-        )
-    ):
-        remove_element_preserving_tail(cv_match)
+    # for translate_tooltip in list(body_element.xpath('.//*[@id="goog-gt-vt"]')):
+    #     remove_element_preserving_tail(translate_tooltip)
+    # for cv_match in list(
+    #     body_element.xpath(
+    #         './/div['
+    #         'starts-with(normalize-space(@id), "cv-match")'
+    #         ']'
+    #     )
+    # ):
+    #     remove_element_preserving_tail(cv_match)
 
     # Step 7: From the cleaned HTML, pick the top 5 longest text-only elements.
     # A candidate element must not contain any child elements, so its content is
     # pure text after the cleanup and flattening passes above.
-    text_candidates: list[tuple[int, Any]] = []
-    for element in body_element.iter():
-        if not isinstance(getattr(element, "tag", None), str):
-            continue
-        if has_child_elements(element):
-            continue
+    # text_candidates: list[tuple[int, Any]] = []
+    # for element in body_element.iter():
+    #     if not isinstance(getattr(element, "tag", None), str):
+    #         continue
+    #     if has_child_elements(element):
+    #         continue
 
-        normalized_element_text = normalize_text(element.text_content() or "")
-        if not normalized_element_text:
-            continue
+    #     normalized_element_text = normalize_text(element.text_content() or "")
+    #     if not normalized_element_text:
+    #         continue
 
-        text_candidates.append((len(normalized_element_text), element))
+    #     text_candidates.append((len(normalized_element_text), element))
 
-    text_candidates.sort(key=lambda item: item[0], reverse=True)
-    selected_elements = [
-        element for _, element in text_candidates[:5]
-    ]
+    # text_candidates.sort(key=lambda item: item[0], reverse=True)
+    # selected_elements = [
+    #     element for _, element in text_candidates[:5]
+    # ]
 
     # Step 8: Find the lowest common parent of the selected top text elements,
     # then move up to its grandparent when possible. If we do not find
     # any candidates, fall back to the cleaned body element.
-    common_parent = find_lowest_common_ancestor(selected_elements)
-    if common_parent is None:
-        target_element = body_element
-    else:
-        target_element = find_grandparent(common_parent)
+    # common_parent = find_lowest_common_ancestor(selected_elements)
+    # if common_parent is None:
+    #     target_element = body_element
+    # else:
+    #     target_element = find_grandparent(common_parent)
 
-    # Step 9: Convert the selected target element into readable plain text.
-    # Each leaf text element becomes its own line so the frontend gets clean
-    # line breaks instead of raw HTML.
-    text_lines: list[str] = []
-    for element in target_element.iter():
-        if not isinstance(getattr(element, "tag", None), str):
-            continue
-        if has_child_elements(element):
-            continue
+    # # Step 9: Convert the selected target element into readable plain text.
+    # # Each leaf text element becomes its own line so the frontend gets clean
+    # # line breaks instead of raw HTML.
+    # text_lines: list[str] = []
+    # for element in target_element.iter():
+    #     if not isinstance(getattr(element, "tag", None), str):
+    #         continue
+    #     if has_child_elements(element):
+    #         continue
 
-        normalized_element_text = normalize_text(element.text_content() or "")
-        if normalized_element_text:
-            text_lines.append(normalized_element_text)
+    #     normalized_element_text = normalize_text(element.text_content() or "")
+    #     if normalized_element_text:
+    #         text_lines.append(normalized_element_text)
 
-    if not text_lines:
-        return normalize_text(target_element.text_content() or "")
+    # if not text_lines:
+    #     return normalize_text(target_element.text_content() or "")
 
-    return "\n".join(text_lines)
+    # return "\n".join(text_lines)
 
 
 def process_cv_html_content(
