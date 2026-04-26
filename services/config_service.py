@@ -18,6 +18,19 @@ class Settings(BaseSettings):
         default=None, alias="LLM_OUTPUT_COST_PER_1M_TOKENS"
     )
     MY_STORY_TXT: Path = Field(default=Path("data/user-profile/my_story.txt"), alias="MY_STORY_TXT")
+    
+    # Google OAuth Configuration
+    google_client_id: Optional[str] = Field(default=None, alias="GOOGLE_CLIENT_ID")
+    google_client_secret: Optional[str] = Field(default=None, alias="GOOGLE_CLIENT_SECRET")
+    google_redirect_uri: str = Field(default="http://localhost:8000/api/auth/google/callback", alias="GOOGLE_REDIRECT_URI")
+    
+    # JWT Configuration
+    secret_key: str = Field(default="your-secret-key-change-in-production", alias="SECRET_KEY")
+    algorithm: str = Field(default="HS256", alias="ALGORITHM")
+    access_token_expire_minutes: int = Field(default=30, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    
+    # Database
+    database_url: str = Field(default="sqlite:///./intellicv.db", alias="DATABASE_URL")
 
     model_config = SettingsConfigDict(
         env_file=".env",
