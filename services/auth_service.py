@@ -1,15 +1,16 @@
 import logging
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Annotated
 import uuid
 
 import jwt
 import requests
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends, Header
 from sqlalchemy.orm import Session
 
 from models.user import User
 from services.config_service import get_settings
+from database import get_db
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -173,8 +174,26 @@ def authenticate_google_user(
     }
 
 
-def get_current_user(token: str, db: Session) -> User:
+def get_current_user(
+    authorization: Annotated[str, Header()] = None,
+    db: Annotated[Session, Depends(get_db)] = None,
+) -> dict:
     """Get current user from token"""
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing authorization header",
+        )
+    
+    # Extract token from "Bearer <token>"
+    parts = authorization.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authorization header format",
+        )
+    
+    token = parts[1]
     payload = verify_token(token)
     email: str = payload.get("sub")
     
@@ -198,4 +217,4 @@ def get_current_user(token: str, db: Session) -> User:
             detail="Inactive user",
         )
     
-    return user
+    return user.to_dict()

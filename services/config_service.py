@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     
     # Database
     database_url: str = Field(default="sqlite:///./intellicv.db", alias="DATABASE_URL")
+    
+    # Stripe Configuration
+    stripe_secret_key: Optional[str] = Field(default=None, alias="STRIPE_SECRET_KEY")
+    stripe_publishable_key: Optional[str] = Field(default=None, alias="STRIPE_PUBLISHABLE_KEY")
 
     model_config = SettingsConfigDict(
         env_file=".env",

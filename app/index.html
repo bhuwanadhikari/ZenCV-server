@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IntelliCV - Buy Credits</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="payment-card">
+            <div class="header">
+                <h1>💳 Buy Credits</h1>
+                <p>Get credits to use with IntelliCV Chrome Extension</p>
+            </div>
+
+            <!-- Auth Check Section -->
+            <div id="auth-section" class="section hidden">
+                <p class="info-text">You need to sign in to purchase credits.</p>
+                <a id="sign-in-btn" href="#" class="btn btn-primary">
+                    Sign in with Google
+                </a>
+            </div>
+
+            <!-- Payment Section -->
+            <div id="payment-section" class="section hidden">
+                <!-- Credit Amount Selection -->
+                <div class="form-group">
+                    <label for="amount">Select Amount (EUR)</label>
+                    <div class="amount-buttons">
+                        <button class="amount-btn" data-amount="3">€3 (1.5M tokens)</button>
+                        <button class="amount-btn" data-amount="5">€5 (2.5M tokens)</button>
+                        <button class="amount-btn" data-amount="10">€10 (5M tokens)</button>
+                        <button class="amount-btn" data-amount="20">€20 (10M tokens)</button>
+                    </div>
+                    <input type="number" id="amount" min="3" max="20" step="0.01" placeholder="Or enter custom amount" class="custom-amount">
+                    <p class="exchange-rate" id="exchange-rate">1 EUR = 500k tokens (your allocation)</p>
+                </div>
+
+                <!-- Current Balance -->
+                <div class="balance-info">
+                    <p>Current Balance: <span id="current-balance">Loading...</span> EUR</p>
+                    <p>Available Tokens: <span id="available-tokens">Loading...</span></p>
+                </div>
+
+                <!-- Stripe Card Element -->
+                <form id="payment-form">
+                    <div class="form-group">
+                        <label for="card-element">Card Details</label>
+                        <div id="card-element" class="card-element"></div>
+                        <div id="card-errors" class="error-message"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-submit" id="submit-btn">
+                        Pay <span id="pay-amount">€3</span>
+                    </button>
+                </form>
+
+                <!-- Sign Out Button -->
+                <button class="btn btn-secondary" id="sign-out-btn">Sign Out</button>
+            </div>
+
+            <!-- Success Section -->
+            <div id="success-section" class="section hidden">
+                <div class="success-message">
+                    <p class="success-icon">✅</p>
+                    <h2>Payment Successful!</h2>
+                    <p id="success-text">Your credits have been added to your account.</p>
+                    <div class="success-details">
+                        <p>Amount Paid: <strong id="success-amount">€5.00</strong></p>
+                        <p>Tokens Received: <strong id="success-tokens">2,500,000</strong></p>
+                    </div>
+                    <button class="btn btn-primary" id="back-to-extension">
+                        Back to Chrome Extension
+                    </button>
+                    <button class="btn btn-secondary" id="buy-more-btn">
+                        Buy More Credits
+                    </button>
+                </div>
+            </div>
+
+            <!-- Error Section -->
+            <div id="error-section" class="section hidden">
+                <div class="error-message-box">
+                    <p class="error-icon">❌</p>
+                    <h2>Payment Failed</h2>
+                    <p id="error-text">Something went wrong. Please try again.</p>
+                    <button class="btn btn-primary" id="retry-btn">Try Again</button>
+                </div>
+            </div>
+
+            <!-- Loading Section -->
+            <div id="loading-section" class="section hidden">
+                <div class="spinner"></div>
+                <p>Processing your payment...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

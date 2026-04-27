@@ -830,3 +830,150 @@ def generate_cover_letter_content(
         ) from exc
 
     return GenerateCoverLetterResponse(cover_letter=cover_letter.strip())
+
+
+def generate_cv_content_with_usage(request: GenerateCvRequest) -> tuple[CvData, Optional[LLMUsage]]:
+    """
+    Generate CV and return both the CV data and token usage information.
+    Used for payment tracking.
+    """
+    cached_cv = load_cached_generated_cv(request.job_url)
+    if cached_cv is not None:
+        return cached_cv, None  # Cached responses don't consume tokens
+
+    # Check for cached job description first
+    cached_jd = load_cached_job_description(request.job_url)
+    job_description = cached_jd if cached_jd else request.job_description
+
+    try:
+        cv_variants = get_cv_variants()
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=500, detail=f"CV variants file not found: {exc}"
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to load CV variants: {exc}"
+        ) from exc
+
+    llm_usage = None
+    try:
+        messages = build_cv_messages(
+            job_description=job_description,
+            cv_variants=[variant.model_dump(mode="json") for variant in cv_variants],
+        )
+        llm_response = get_llm_service().generate_json(messages)
+        generated_cv = CV_DATA_ADAPTER.validate_python(llm_response.payload)
+        validated_cv = validate_generated_cv(generated_cv)
+        llm_usage = llm_response.usage
+        
+        print(
+            "Generated CV JSON:\n"
+            + json.dumps(
+                validated_cv.model_dump(mode="json"), indent=2, ensure_ascii=True
+            )
+        )
+        try:
+            output_directory = save_generated_cv_artifacts(
+                job_url=request.job_url,
+                generated_cv=validated_cv,
+                llm_model=llm_response.model,
+                llm_usage=llm_response.usage,
+            )
+            print(f"Saved generated CV artifacts to: {output_directory}")
+        except OSError as exc:
+            raise HTTPException(
+                status_code=500, detail=f"Failed to save generated CV artifacts: {exc}"
+            ) from exc
+        return validated_cv, llm_usage
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=502, detail=f"Invalid generated CV: {exc}"
+        ) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502, detail=f"Failed to generate CV: {exc}"
+        ) from exc
+
+
+def generate_cover_letter_content_with_usage(
+    request: GenerateCoverLetterRequest,
+) -> tuple[GenerateCoverLetterResponse, Optional[LLMUsage]]:
+    """
+    Generate cover letter and return both the response and token usage information.
+    Used for payment tracking.
+    """
+    cached_cover_letter = load_cached_cover_letter(request.job_url)
+    if cached_cover_letter is not None:
+        return GenerateCoverLetterResponse(cover_letter=cached_cover_letter), None  # Cached responses don't consume tokens
+
+    # Check for cached job description first
+    cached_jd = load_cached_job_description(request.job_url)
+    job_description = cached_jd if cached_jd else request.job_description
+
+    try:
+        cv_variants = get_cv_variants()
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=500, detail=f"CV variants file not found: {exc}"
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to load CV variants: {exc}"
+        ) from exc
+
+    llm_usage = None
+    try:
+        generated_cv = request.generated_cv
+        if generated_cv is None:
+            cached_cv = load_cached_generated_cv(request.job_url)
+            if cached_cv is not None:
+                generated_cv = cached_cv.model_dump(mode="json")
+
+        messages = build_cover_letter_messages(
+            page_title=request.page_title,
+            job_url=request.job_url,
+            job_description=job_description,
+            cv_variants=[variant.model_dump(mode="json") for variant in cv_variants],
+            generated_cv=generated_cv,
+            story_json=request.story_json_override,
+        )
+        llm_response = get_llm_service().generate_json(messages)
+        cover_letter = llm_response.payload["cover_letter"]
+        llm_usage = llm_response.usage
+        
+        if not isinstance(cover_letter, str) or not cover_letter.strip():
+            raise ValueError(
+                "LLM response did not include a valid cover_letter string."
+            )
+        try:
+            output_directory = save_generated_cover_letter_artifacts(
+                job_url=request.job_url,
+                cover_letter=cover_letter,
+                llm_model=llm_response.model,
+                llm_usage=llm_response.usage,
+            )
+            print(f"Saved generated cover letter artifacts to: {output_directory}")
+        except OSError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to save generated cover letter artifacts: {exc}",
+            ) from exc
+        return GenerateCoverLetterResponse(cover_letter=cover_letter.strip()), llm_usage
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=502, detail=f"Invalid generated cover letter: {exc}"
+        ) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502, detail=f"Failed to generate cover letter: {exc}"
+        ) from exc
+
