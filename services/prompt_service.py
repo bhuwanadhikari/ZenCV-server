@@ -34,7 +34,7 @@ def build_cv_messages(
         - Prioritize overlap with the target job's responsibilities, technologies, seniority, domain, collaboration style, and business outcomes.
         - Rewrite and combine evidence for clarity, impact, and ATS alignment, but stay faithful to the source variants.
         - Keep the candidate identity and contact information consistent with the supplied variants.
-        - The generated variant can be dynamic across all supported fields, including `role`, `profile.summary`, `skillGroups`, section entry titles, stacks, and bullets, but it must remain grounded in the provided variants.
+        - The generated variant can be dynamic across all supported fields, including `role`, `photo`, `profile.summary`, `skillGroups`, section entry titles, stacks, and bullets, but it must remain grounded in the provided variants.
         - You may combine evidence across variants for the same candidate. For example, an entry title may come from one variant while bullet points for that same entry may come from another variant, as long as they clearly refer to the same underlying experience and remain truthful.
         - Preserve the same top-level schema and the same nested object shapes used by the variants.
         - Preserve section titles and their order.
@@ -48,6 +48,7 @@ def build_cv_messages(
         - Keep the Education section to no more than 2 entries.
         - If there are projects, publications, or other sections, prioritize the most recent and apply the section even if it is slightly relevant to the target; keep max 3 bullet points only which is to be tweaked based on the job description.
         - Skill groups should remain relevant to the job description and use only skills present in the source variants.
+        - No need to make the role exactly match the JD title, but it should be in the same domain and seniority level when possible.
 
         Output contract:
         - Return valid JSON only.
@@ -56,6 +57,7 @@ def build_cv_messages(
           {
             "name": "string",
             "role": "string",
+            "photo": "string (url)",
             "contactLines": [
               [
                 {
@@ -161,7 +163,7 @@ def build_cover_letter_messages(
         - Include a salutation as the first line of the letter.
         - If a hiring contact is not provided, use a professional generic salutation such as "Dear Hiring Team,".
         - Use 4 or 5 paragraphs.
-        - Paragraph 1 after the salutation: role fit, motivation, and a specific hook tied to the opportunity.
+        - Paragraph 1 after the salutation: role fit (no need to make exact copy of the JD, just make it relevant), motivation, and a specific hook tied to the opportunity.
         - Paragraphs 2 and 3: connect the most relevant experience, technologies, ownership, collaboration, and outcomes to the role.
         - Paragraph 4: explain why the candidate is a strong match for the team or product context now.
         - Optional paragraph 5: concise forward-looking close.

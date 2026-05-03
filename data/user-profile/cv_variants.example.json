@@ -2,6 +2,8 @@
   {
     "name": "JANE DOE",
     "role": "SOFTWARE ENGINEER",
+    "photo": "https://i.pravatar.cc/300",
+
     "contactLines": [
       [
         {
@@ -25,6 +27,11 @@
           "label": "Linkedin",
           "value": "linkedin.com/in/janedoe",
           "href": "https://linkedin.com/in/janedoe"
+        },
+        {
+          "label": "Portfolio",
+          "value": "portfolio.example.com",
+          "href": "https://portfolio.example.com"
         }
       ]
     ],
@@ -129,6 +136,8 @@
   {
     "name": "JANE DOE",
     "role": "SOFTWARE ENGINEER",
+    "photo": "https://i.pravatar.cc/300",
+
     "contactLines": [
       [
         {

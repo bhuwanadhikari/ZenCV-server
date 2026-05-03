@@ -64,6 +64,7 @@ class CvSkillGroup(BaseModel):
 class CvData(BaseModel):
     name: str
     role: str
+    photo: str
     contactLines: List[List[CvContactItem]]
     profile: CvProfile
     skillGroups: List[CvSkillGroup]
