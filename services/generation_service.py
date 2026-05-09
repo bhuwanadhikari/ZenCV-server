@@ -1,5 +1,6 @@
 import json
 import hashlib
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
@@ -109,27 +110,26 @@ def hash_job_url(job_url: str) -> str:
 
 def build_generated_cv_directory(job_url: str) -> Path:
     GENERATED_CVS_PATH.mkdir(parents=True, exist_ok=True)
-    return GENERATED_CVS_PATH / hash_job_url(job_url)
+    timestamp_prefix = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    return GENERATED_CVS_PATH / f"{timestamp_prefix}_{hash_job_url(job_url)}"
 
 
 # TODO: later use the cv json that's previously generated to make better cover letter
 def find_generated_cv_directory(job_url: str) -> Optional[Path]:
     GENERATED_CVS_PATH.mkdir(parents=True, exist_ok=True)
-    hashed_directory = build_generated_cv_directory(job_url)
+    job_url_hash = hash_job_url(job_url)
+    hashed_directory = GENERATED_CVS_PATH / job_url_hash
     if hashed_directory.is_dir():
         return hashed_directory
 
-    folder_suffix = f"__{hash_job_url(job_url)}"
+    # Support both the new timestamped format and older legacy folder suffixes.
     matches = sorted(
-        path for path in GENERATED_CVS_PATH.glob(f"*{folder_suffix}") if path.is_dir()
+        path
+        for path in GENERATED_CVS_PATH.iterdir()
+        if path.is_dir() and (path.name.endswith(f"_{job_url_hash}") or path.name.endswith(f"__{job_url_hash}"))
     )
     if matches:
-        legacy_directory = matches[0]
-        try:
-            legacy_directory.rename(hashed_directory)
-            return hashed_directory
-        except OSError:
-            return legacy_directory
+        return matches[-1]
     return None
 
 

@@ -49,6 +49,7 @@ def build_cv_messages(
         - If there are projects, publications, or other sections, prioritize the most recent and apply the section even if it is slightly relevant to the target; keep max 3 bullet points only which is to be tweaked based on the job description.
         - Skill groups should remain relevant to the job description and use only skills present in the source variants.
         - No need to make the role exactly match the JD title, but it should be in the same domain and seniority level when possible.
+        - You need to make the bullet points of education-section entries lesser, shorter and more compact to make less space if you are adding projects or publication sections.
 
         Output contract:
         - Return valid JSON only.
